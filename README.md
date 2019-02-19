@@ -72,6 +72,7 @@ For more information look at lxc.conf (5)
 At this point, I assume you know what you do.
 Press <enter> to continue ...
 ^Caborted
+# prepare lxc.conf like the explanation above
 sudo lxc-create -n debian01 -t debian -f lxc.conf
 # skip..
 Download complete.
