@@ -89,7 +89,8 @@ bin_PROGRAMS = \
 	lxc-restart \
 	lxc-kill
 
-pkglib_PROGRAMS = \
+# See https://lists.gnu.org/archive/html/coreutils/2011-06/msg00042.html
+pkglibexec_PROGRAMS = \
 	lxc-init
 
 AM_LDFLAGS=-Wl,-E -Wl,-rpath -Wl,$(libdir)

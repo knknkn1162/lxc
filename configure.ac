@@ -6,7 +6,8 @@ AC_INIT([lxc], [0.7.4.2])
 AC_CONFIG_SRCDIR([configure.ac])
 AC_CONFIG_AUX_DIR([config])
 AM_CONFIG_HEADER([src/config.h])
-AM_INIT_AUTOMAKE([-Wno-portability])
+# You don't have to prepare project related files(`NEWS`, `README`, `AUTHORS` and `ChangeLog`)
+AM_INIT_AUTOMAKE([foreign -Wno-portability])
 AC_CANONICAL_HOST
 AM_PROG_CC_C_O
 AC_GNU_SOURCE
@@ -71,7 +72,7 @@ AC_CHECK_HEADERS([linux/netlink.h linux/genetlink.h],
 				  [#include <sys/socket.h>
 		 ])
 
-AC_CHECK_HEADERS([sys/capability.h], [], AC_MSG_ERROR([please install libcap-devel.]),
+AC_CHECK_HEADERS([sys/capability.h], [], AC_MSG_ERROR([please install libcap-dev.]),
 [#include <sys/types.h>
 #include <sys/capability.h>])
 AC_CHECK_LIB(cap,cap_set_proc,caplib=yes,caplib=no)
