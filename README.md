@@ -81,6 +81,14 @@ Generation complete.
 Root password is 'root', please change !
 'debian' template installed
 'debian01' created
+$ sudo lxc-create -n debian02 -t debian -f lxc.conf
+debootstrap is /usr/sbin/debootstrap
+Checking cache download in /usr/local/cache/lxc/debian/rootfs-jessie-amd64 ...
+Copying rootfs to /usr/local/lib/lxc/debian02/rootfs...Generating locales (this might take a while)...
+Generation complete.
+Root password is 'root', please change !
+'debian' template installed
+'debian02' created
 ```
 
 ## lxc-start
