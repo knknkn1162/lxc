@@ -21,7 +21,7 @@ sudo make install
 
 I configured these libraries via Vagrant:
 
-```Vagrantfile
+```ruby
 # -*- mode: ruby -*-
 # vi: set ft=ruby :
 # Vagrantfile
@@ -81,4 +81,22 @@ Generation complete.
 Root password is 'root', please change !
 'debian' template installed
 'debian01' created
+```
+
+## lxc-start
+
+
+Assume that the lxc.conf is set like this:
+
+```conf
+# lxc.conf
+lxc.network.type=veth
+lxc.network.link=br0
+lxc.network.flags=up
+```
+
+```bash
+# create bridge in advance on the host(ubuntu 18.04)
+sudo ip link add name br0 type bridge
+sudo ip link set dev br0 up
 ```
