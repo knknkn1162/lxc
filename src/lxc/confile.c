@@ -557,6 +557,7 @@ static int config_cgroup(const char *key, char *value, struct lxc_conf *lxc_conf
 	struct lxc_list *cglist;
 	struct lxc_cgroup *cgelem;
 
+  // The head of the pointer of the string, devices.{allow,deny}
 	subkey = strstr(key, token);
 
 	if (!subkey)

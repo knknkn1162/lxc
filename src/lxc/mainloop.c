@@ -46,6 +46,8 @@ int lxc_mainloop(struct lxc_epoll_descr *descr)
 
 	for (;;) {
 
+    // int epoll_wait(int epfd, struct epoll_event *events, int maxevents, int timeout);
+    // struct epoll_event { uint32_t     events; epoll_data_t data; };
 		nfds = epoll_wait(descr->epfd, events, MAX_EVENTS, -1);
 		if (nfds < 0) {
 			if (errno == EINTR)

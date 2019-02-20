@@ -150,6 +150,13 @@ int main(int argc, char *argv[])
 		return err;
 	}
 
+  // configure lxc_conf
+  /*
+struct lxc_conf {
+	char *fstab; int tty; int pts; int reboot; int personality;
+	struct utsname *utsname; struct lxc_list cgroup; struct lxc_list network; struct lxc_list mount_list;
+	struct lxc_list caps; struct lxc_tty_info tty_info; struct lxc_console console; struct lxc_rootfs rootfs; };
+   */
 	if (rcfile && lxc_config_read(rcfile, conf)) {
 		ERROR("failed to read configuration file");
 		return err;

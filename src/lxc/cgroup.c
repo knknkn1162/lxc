@@ -54,12 +54,14 @@ enum {
 	CGROUP_CLONE_CHILDREN,
 };
 
+// get_cgroup_mount(MTAB, cgmnt)
 static int get_cgroup_mount(const char *mtab, char *mnt)
 {
         struct mntent *mntent;
         FILE *file = NULL;
         int err = -1;
 
+        // FILE *setmntent(const char *filename, const char *type);
         file = setmntent(mtab, "r");
         if (!file) {
                 SYSERROR("failed to open %s", mtab);
@@ -68,19 +70,19 @@ static int get_cgroup_mount(const char *mtab, char *mnt)
 
         while ((mntent = getmntent(file))) {
 
-		/* there is a cgroup mounted named "lxc" */
-		if (!strcmp(mntent->mnt_fsname, "lxc") &&
-		    !strcmp(mntent->mnt_type, "cgroup")) {
-			strcpy(mnt, mntent->mnt_dir);
-			err = 0;
-			break;
-		}
+          /* there is a cgroup mounted named "lxc" */
+          if (!strcmp(mntent->mnt_fsname, "lxc") &&
+              !strcmp(mntent->mnt_type, "cgroup")) {
+            strcpy(mnt, mntent->mnt_dir);
+            err = 0;
+            break;
+          }
 
-		/* fallback to the first non-lxc cgroup found */
-                if (!strcmp(mntent->mnt_type, "cgroup") && err) {
-			strcpy(mnt, mntent->mnt_dir);
-			err = 0;
-		}
+          /* fallback to the first non-lxc cgroup found */
+          if (!strcmp(mntent->mnt_type, "cgroup") && err) {
+            strcpy(mnt, mntent->mnt_dir);
+            err = 0;
+          }
         };
 
 	DEBUG("using cgroup mounted at '%s'", mnt);
@@ -208,6 +210,7 @@ int lxc_cgroup_create(const char *name, pid_t pid)
 	char clonechild[MAXPATHLEN];
 	int flags;
 
+  // #define MTAB "/proc/mounts", "/proc/self/mounts"
 	if (get_cgroup_mount(MTAB, cgmnt)) {
 		ERROR("cgroup is not mounted");
 		return -1;
@@ -310,17 +313,20 @@ int lxc_cgroup_path_get(char **path, const char *name)
 	return 0;
 }
 
+// lxc_cgroup_set(name, cg->subsystem, cg->value) where `struct lxc_cgroup *cg;`
 int lxc_cgroup_set(const char *name, const char *subsystem, const char *value)
 {
 	int fd, ret;
 	char *nsgroup;
 	char path[MAXPATHLEN];
 
+  // put ${rootfs}/sys/fs/cgroup/systemd/debian01 in `name` variable
 	ret = lxc_cgroup_path_get(&nsgroup, name);
 	if (ret)
 		return -1;
 
-        snprintf(path, MAXPATHLEN, "%s/%s", nsgroup, subsystem);
+    // path=`${rootfs}/sys/fs/cgroup/systemd/debian01/devices.deny`
+    snprintf(path, MAXPATHLEN, "%s/%s", nsgroup, subsystem);
 
 	fd = open(path, O_WRONLY);
 	if (fd < 0) {

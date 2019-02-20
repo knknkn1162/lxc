@@ -326,6 +326,7 @@ int lxc_poll(const char *name, struct lxc_handler *handler)
 		goto out_mainloop_open;
 	}
 
+  /* struct lxc_epoll_descr { int epfd; struct lxc_list handlers; }; */
 	return lxc_mainloop(&descr);
 
 out_mainloop_open:
@@ -455,6 +456,7 @@ static int do_start(void *data)
 		goto out_warn_father;
 	}
 
+  // CAP_SYS_BOOT: Use reboot(2) and kexec_load(2).
 	if (prctl(PR_CAPBSET_DROP, CAP_SYS_BOOT, 0, 0, 0)) {
 		SYSERROR("failed to remove CAP_SYS_BOOT capability");
 		return -1;
@@ -472,12 +474,14 @@ out_warn_father:
 	return -1;
 }
 
+/* lxc_sync_init, lxc_create_network, lxc_clone,  */
 int lxc_spawn(struct lxc_handler *handler)
 {
 	int clone_flags;
 	int failed_before_rename = 0;
 	const char *name = handler->name;
 
+  // socketpair(AF_LOCAL, SOCK_STREAM, 0, handler->sv)
 	if (lxc_sync_init(handler))
 		return -1;
 
@@ -571,6 +575,7 @@ int __lxc_start(const char *name, struct lxc_conf *conf,
 	handler->ops = ops;
 	handler->data = data;
 
+  // lxc_sync_init
 	err = lxc_spawn(handler);
 	if (err) {
 		ERROR("failed to spawn '%s'", name);

@@ -832,6 +832,7 @@ static int setup_console(const struct lxc_rootfs *rootfs,
 	return 0;
 }
 
+// setup_cgroup(name, &lxc_conf->cgroup)
 static int setup_cgroup(const char *name, struct lxc_list *cgroups)
 {
 	struct lxc_list *iterator;
@@ -845,6 +846,7 @@ static int setup_cgroup(const char *name, struct lxc_list *cgroups)
 
 		cg = iterator->elem;
 
+    // int lxc_cgroup_set(const char *name, const char *subsystem, const char *value)
 		if (lxc_cgroup_set(name, cg->subsystem, cg->value))
 			goto out;
 
@@ -1719,6 +1721,7 @@ int lxc_setup(const char *name, struct lxc_conf *lxc_conf)
 		return -1;
 	}
 
+  // name: container name
 	if (setup_cgroup(name, &lxc_conf->cgroup)) {
 		ERROR("failed to setup the cgroups for '%s'", name);
 		return -1;

@@ -745,6 +745,7 @@ int lxc_ipv4_addr_add(int ifindex, struct in_addr *addr,
  * There is a lxc_bridge_attach, but no need of a bridge detach
  * as automatically done by kernel when a netdev is deleted.
  */
+/* lxc_bridge_attach(netdev->link, veth1); */
 int lxc_bridge_attach(const char *bridge, const char *ifname)
 {
 	int fd, index, err;
