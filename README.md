@@ -110,4 +110,9 @@ lxc.network.flags=up
 # create bridge in advance on the host(ubuntu 18.04)
 sudo ip link add name br0 type bridge
 sudo ip link set dev br0 up
+# This configuration file if present will be used even if there is already a configuration file present in the previously created container (via lxc-create).See the link https://linuxcontainers.org/ru/lxc/manpages/man1/lxc-start.1.html
+ip link show
+sudo lxc-start --rcfile=lxc.conf --name=debian01
+# after use
+sudo ip link delete br0 type bridge
 ```
