@@ -91,6 +91,9 @@ Root password is 'root', please change !
 'debian02' created
 ```
 
+The configuration settings are written in the several files. The detail is [here](https://gist.github.com/knknkn1162/8060d2edaa9e16882259196540ce92df).
+
+
 ## lxc-start
 
 
