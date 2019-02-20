@@ -155,6 +155,7 @@ int main(int argc, char *argv[])
 		return err;
 	}
 
+  //   -s, --define KEY=VAL Assign VAL to configuration variable KEY\n",
 	if (lxc_config_define_load(&defines, conf))
 		return err;
 
@@ -178,6 +179,7 @@ int main(int argc, char *argv[])
 			close(fd);
 		}
 
+    // char *realpath(const char *path, char *resolved_path);
 		console = realpath(my_args.console, NULL);
 		if (!console) {
 			SYSERROR("failed to get the real path of '%s'",
@@ -185,6 +187,11 @@ int main(int argc, char *argv[])
 			return err;
 		}
 
+/*
+  struct lxc_console {
+    int slave; int master; int peer; char *path; char name[MAXPATHLEN]; struct termios *tios;
+  };
+ */
 		conf->console.path = strdup(console);
 		if (!conf->console.path) {
 			ERROR("failed to dup string '%s'", console);

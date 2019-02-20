@@ -20,6 +20,10 @@
 # License along with this library; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA 02111-1307 USA
 
+# install_debian $rootfs
+# configure_debian $rootfs $name
+# copy_configuration $path $rootfs
+
 SUITE=${SUITE:-jessie}
 MIRROR=${MIRROR:-http://ftp.jp.debian.org/debian}
 
@@ -32,13 +36,21 @@ configure_debian()
     # therefore creating missing device nodes for tty1-4.
     for tty in $(seq 1 4); do
 	if [ ! -e $rootfs/dev/tty$tty ]; then
+    # ls -ls /usr/local/lib/lxc/${lxc_name}/rootfs/dev
+    # 0 crw-r--r-- 1 root root 4, 1 Feb 19 06:46 tty1
+    # 0 crw-r--r-- 1 root root 4, 2 Feb 19 06:46 tty2
+    # 0 crw-r--r-- 1 root root 4, 3 Feb 19 06:46 tty3
+    # 0 crw-r--r-- 1 root root 4, 4 Feb 19 06:46 tty4
 	    mknod $rootfs/dev/tty$tty c 4 $tty
 	fi
     done
 
     # configure the inittab
+    # /sbin/Init execute the program located in /etc/inittab
     cat <<EOF > $rootfs/etc/inittab
+# Full multiuser mode
 id:3:initdefault:
+# System initialization.
 si::sysinit:/etc/init.d/rcS
 l0:0:wait:/etc/init.d/rc 0
 l1:1:wait:/etc/init.d/rc 1
@@ -84,6 +96,8 @@ EOF
     fi
 
     # remove pointless services in a container
+    # check `ls /etc/rc*.d/`
+    # Removing any system startup links
     chroot $rootfs /usr/sbin/update-rc.d -f checkroot.sh remove
     chroot $rootfs /usr/sbin/update-rc.d -f umountfs remove
     chroot $rootfs /usr/sbin/update-rc.d -f hwclock.sh remove
@@ -122,6 +136,7 @@ openssh-server
     echo "Downloading debian minimal ..."
     debootstrap --verbose --variant=minbase --arch=$arch \
 	--include=$packages \
+  # MIRROR=${MIRROR:-http://ftp.jp.debian.org/debian}
 	"$SUITE" "$cache/partial-$SUITE-$arch" $MIRROR
     if [ $? -ne 0 ]; then
 	echo "Failed to download the rootfs, aborting."
@@ -148,6 +163,7 @@ copy_debian()
 
 install_debian()
 {
+    # LOCALSTATEDIR = /usr/local/cache/lxc/debian
     cache="@LOCALSTATEDIR@/cache/lxc/debian"
     rootfs=$1
     mkdir -p @LOCALSTATEDIR@/lock/subsys/
@@ -169,6 +185,7 @@ install_debian()
 
 	echo "Checking cache download in $cache/rootfs-$SUITE-$arch ... "
 	if [ ! -e "$cache/rootfs-$SUITE-$arch" ]; then
+    #     debootstrap --verbose --variant=minbase --arch=$arch --include=$packages "$SUITE" "$cache/partial-$SUITE-$arch" $MIRROR
 	    download_debian $cache $arch
 	    if [ $? -ne 0 ]; then
 		echo "Failed to download 'debian base'"
@@ -176,6 +193,7 @@ install_debian()
 	    fi
 	fi
 
+  # cp -a "$cache/rootfs-$SUITE-$arch" $rootfs || return 1
 	copy_debian $cache $arch $rootfs
 	if [ $? -ne 0 ]; then
 	    echo "Failed to copy rootfs"
@@ -260,6 +278,7 @@ EOF
     return 0
 }
 
+${templatedir}/lxc-$lxc_template --path=$lxc_path/$lxc_name --name=$lxc_name
 options=$(getopt -o hp:n:c -l help,path:,name:,clean -- "$@")
 if [ $? -ne 0 ]; then
         usage $(basename $0)
@@ -300,6 +319,7 @@ if [ "$(id -u)" != "0" ]; then
     exit 1
 fi
 
+# /usr/local/lib/lxc/${lxc_name}/rootfs
 rootfs=$path/rootfs
 
 install_debian $rootfs

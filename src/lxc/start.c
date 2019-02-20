@@ -204,6 +204,7 @@ static int setup_signal_fd(sigset_t *oldmask)
 		return -1;
 	}
 
+  // int signalfd(int fd, const sigset_t *mask, int flags);
 	fd = signalfd(-1, &mask, 0);
 	if (fd < 0) {
 		SYSERROR("failed to create the signal fd");
@@ -289,6 +290,7 @@ int lxc_pid_callback(int fd, struct lxc_request *request,
 int lxc_set_state(const char *name, struct lxc_handler *handler, lxc_state_t state)
 {
 	handler->state = state;
+  // sendto the socket named lxc-monitor
 	lxc_monitor_send_state(name, state);
 	return 0;
 }
@@ -333,6 +335,7 @@ out_sigfd:
 	return -1;
 }
 
+// conf, name, state
 struct lxc_handler *lxc_init(const char *name, struct lxc_conf *conf)
 {
 	struct lxc_handler *handler;
@@ -547,9 +550,15 @@ out_abort:
 	return -1;
 }
 
+// 	return __lxc_start(name, conf, &start_ops, &start_arg);
 int __lxc_start(const char *name, struct lxc_conf *conf,
 		struct lxc_operations* ops, void *data)
 {
+  /*
+  struct lxc_handler {
+    pid_t pid; char *name; lxc_state_t state; int sigfd; sigset_t oldmask;
+    struct lxc_conf *conf; struct lxc_operations *ops; void *data; int sv[2];
+  }; */
 	struct lxc_handler *handler;
 	int err = -1;
 	int status;

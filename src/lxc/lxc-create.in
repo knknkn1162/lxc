@@ -124,6 +124,7 @@ else
 	exit 1
     fi
 
+    # locate in `/usr/local/lib/lxc/${lxc_name}/config`
     cp $lxc_config $lxc_path/$lxc_name/config
 fi
 

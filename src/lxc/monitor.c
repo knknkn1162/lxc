@@ -51,16 +51,18 @@ static void lxc_monitor_send(struct lxc_msg *msg)
 {
 	int fd;
 	struct sockaddr_un addr = { .sun_family = AF_UNIX };
+  // why start with idx 1?
 	char *offset = &addr.sun_path[1];
 
+  // It is usual to bind a socket to an absolute pathname, so that the socket resides at a fixed address in the file system. Using a relative pathname is possible, but unusual
 	strcpy(offset, "lxc-monitor");
 
 	fd = socket(PF_UNIX, SOCK_DGRAM, 0);
 	if (fd < 0)
 		return;
 
-	sendto(fd, msg, sizeof(*msg), 0,
-	       (const struct sockaddr *)&addr, sizeof(addr));
+  // ssize_t sendto(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen);
+	sendto(fd, msg, sizeof(*msg), 0, (const struct sockaddr *)&addr, sizeof(addr));
 
 	close(fd);
 }

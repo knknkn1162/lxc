@@ -104,6 +104,7 @@ static struct config config[] = {
 
 static const size_t config_size = sizeof(config)/sizeof(struct config);
 
+//get callback
 static struct config *getconfig(const char *key)
 {
 	int i;
@@ -793,12 +794,14 @@ static int parse_line(char *buffer, void *data)
 		return -1;
 	}
 
+  // line = line + i; => line[i]
 	line += lxc_char_left_gc(line, strlen(line));
 	if (line[0] == '#') {
 		ret = 0;
 		goto out;
 	}
 
+  // The  strstr()  function  finds  the first occurrence of the substring
 	dot = strstr(line, "=");
 	if (!dot) {
 		ERROR("invalid configuration line: %s", line);
@@ -814,12 +817,16 @@ static int parse_line(char *buffer, void *data)
 	value += lxc_char_left_gc(value, strlen(value));
 	value[lxc_char_right_gc(value, strlen(value))] = '\0';
 
+  // get hash shaped {name, cb}.
 	config = getconfig(key);
 	if (!config) {
 		ERROR("unknow key %s", key);
 		goto out;
 	}
 
+  // callback function
+  // static int config_**(const char *key, char *value, struct lxc_conf *lxc_conf)
+  // the `key` argument is often never used.
 	ret = config->cb(key, value, data);
 
 out:
@@ -834,6 +841,7 @@ int lxc_config_readline(char *buffer, struct lxc_conf *conf)
 
 int lxc_config_read(const char *file, struct lxc_conf *conf)
 {
+  // int lxc_file_for_each_line(const char *file, lxc_file_cb callback, void *data)
 	return lxc_file_for_each_line(file, parse_line, conf);
 }
 
@@ -856,6 +864,7 @@ int lxc_config_define_load(struct lxc_list *defines, struct lxc_conf *conf)
 	int ret = 0;
 
 	lxc_list_for_each(it, defines) {
+    // parse_line(buffer, conf)
 		ret = lxc_config_readline(it->elem, conf);
 		if (ret)
 			break;

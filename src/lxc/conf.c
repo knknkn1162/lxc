@@ -1623,6 +1623,15 @@ int lxc_assign_network(struct lxc_list *network, pid_t pid)
 	return 0;
 }
 
+// require tty_info->tty
+/*
+  struct lxc_tty_info {
+    int nbtty; struct lxc_pty_info *pty_info;
+  };
+struct lxc_pty_info {
+  char name[MAXPATHLEN]; int master; int slave; int busy;
+};
+ */
 int lxc_create_tty(const char *name, struct lxc_conf *conf)
 {
 	struct lxc_tty_info *tty_info = &conf->tty_info;
