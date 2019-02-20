@@ -36,7 +36,9 @@ Vagrant.configure('2') do |config|
   config.vm.provision 'shell', inline: <<-SHELL
     apt-get update
     # for seccomp.h and sys/capability.h
-    apt-get install -y gcc make autotools-dev automake pkg-config libcap-devel debootstrap
+    apt-get install -y gcc make autotools-dev automake pkg-config libcap-dev debootstrap
+    apt remove lxcfs -y --purge
+
   SHELL
 end
 ```

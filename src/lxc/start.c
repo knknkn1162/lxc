@@ -299,6 +299,7 @@ int lxc_poll(const char *name, struct lxc_handler *handler)
 {
 	int sigfd = handler->sigfd;
 	int pid = handler->pid;
+  /* struct lxc_epoll_descr { int epfd; struct lxc_list handlers; }; */
 	struct lxc_epoll_descr descr;
 
 	if (lxc_mainloop_open(&descr)) {
