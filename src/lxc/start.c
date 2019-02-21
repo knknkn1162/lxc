@@ -363,14 +363,18 @@ struct lxc_handler *lxc_init(const char *name, struct lxc_conf *conf)
 	}
 
 
-  //struct lxc_console {
-  //  int slave; int master; int peer; char *path; char name[MAXPATHLEN]; struct termios *tios;
-  //};
+
+  // struct lxc_tty_info {
+  //   int nbtty; struct lxc_pty_info *pty_info;
+  // };
 	if (lxc_create_tty(name, conf)) {
 		ERROR("failed to create the ttys");
 		goto out_aborting;
 	}
 
+  //struct lxc_console {
+  //  int slave; int master; int peer; char *path; char name[MAXPATHLEN]; struct termios *tios;
+  //};
 	if (lxc_create_console(conf)) {
 		ERROR("failed to create console");
 		goto out_delete_tty;

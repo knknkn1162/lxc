@@ -162,6 +162,10 @@ out:
 	return *console ? 0 : -1;
 }
 
+
+//struct lxc_console {
+//  int slave; int master; int peer; char *path; char name[MAXPATHLEN]; struct termios *tios;
+//};
 int lxc_create_console(struct lxc_conf *conf)
 {
 	struct termios tios;
@@ -203,6 +207,7 @@ int lxc_create_console(struct lxc_conf *conf)
 
 	console->peer = fd;
 
+  // test whether a file descriptor refers to a terminal
 	if (!isatty(console->peer))
 		return 0;
 
