@@ -57,6 +57,7 @@ static void lxc_monitor_send(struct lxc_msg *msg)
   // It is usual to bind a socket to an absolute pathname, so that the socket resides at a fixed address in the file system. Using a relative pathname is possible, but unusual
 	strcpy(offset, "lxc-monitor");
 
+  // PF_UNIX = AF_UNIX
 	fd = socket(PF_UNIX, SOCK_DGRAM, 0);
 	if (fd < 0)
 		return;

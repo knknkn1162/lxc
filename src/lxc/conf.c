@@ -1654,6 +1654,7 @@ int lxc_create_tty(const char *name, struct lxc_conf *conf)
 
 		struct lxc_pty_info *pty_info = &tty_info->pty_info[i];
 
+    // int openpty(int *amaster, int *aslave, char *name, const struct termios *termp, const struct winsize *winp);
 		if (openpty(&pty_info->master, &pty_info->slave,
 			    pty_info->name, NULL, NULL)) {
 			SYSERROR("failed to create pty #%d", i);
@@ -1665,7 +1666,7 @@ int lxc_create_tty(const char *name, struct lxc_conf *conf)
 		DEBUG("allocated pty '%s' (%d/%d)",
 		      pty_info->name, pty_info->master, pty_info->slave);
 
-                /* Prevent leaking the file descriptors to the container */
+  /* Prevent leaking the file descriptors to the container */
 		fcntl(pty_info->master, F_SETFD, FD_CLOEXEC);
 		fcntl(pty_info->slave, F_SETFD, FD_CLOEXEC);
 

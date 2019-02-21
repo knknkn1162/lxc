@@ -337,7 +337,7 @@ out_sigfd:
 	return -1;
 }
 
-// conf, name, state
+// lxc_create_tty, lxc_create_console
 struct lxc_handler *lxc_init(const char *name, struct lxc_conf *conf)
 {
 	struct lxc_handler *handler;
@@ -362,6 +362,10 @@ struct lxc_handler *lxc_init(const char *name, struct lxc_conf *conf)
 		goto out_free_name;
 	}
 
+
+  //struct lxc_console {
+  //  int slave; int master; int peer; char *path; char name[MAXPATHLEN]; struct termios *tios;
+  //};
 	if (lxc_create_tty(name, conf)) {
 		ERROR("failed to create the ttys");
 		goto out_aborting;
