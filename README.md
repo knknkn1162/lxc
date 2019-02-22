@@ -37,7 +37,6 @@ Vagrant.configure('2') do |config|
     apt-get update
     # for seccomp.h and sys/capability.h
     apt-get install -y gcc make autotools-dev automake pkg-config libcap-dev debootstrap
-    apt remove lxcfs -y --purge
 
   SHELL
 end
@@ -120,6 +119,7 @@ $ sudo ip link add name br0 type bridge
 $ sudo ip link set dev br0 up
 # This configuration file if present will be used even if there is already a configuration file present in the previously created container (via lxc-create).See the link https://linuxcontainers.org/ru/lxc/manpages/man1/lxc-start.1.html
 ip link show
+# you shouldn't set rcfile option after setting file at `lxc-create`.
 $ sudo lxc-start --name=debian01 --  /bin/bash
 
 # after use

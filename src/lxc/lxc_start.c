@@ -108,6 +108,7 @@ int main(int argc, char *argv[])
 	if (lxc_caps_init())
 		return err;
 
+  // 		case 'c':	args->console = optarg; break;
 	if (lxc_arguments_parse(&my_args, argc, argv))
 		return err;
 
@@ -213,6 +214,7 @@ struct lxc_conf {
 		return err;
 	}
 
+  // args = default_args or myargs.argv
 	err = lxc_start(my_args.name, args, conf);
 
 	/*

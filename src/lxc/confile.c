@@ -555,6 +555,7 @@ static int config_cgroup(const char *key, char *value, struct lxc_conf *lxc_conf
 	char *token = "lxc.cgroup.";
 	char *subkey;
 	struct lxc_list *cglist;
+  // struct lxc_cgroup { char *subsystem; char *value; };
 	struct lxc_cgroup *cgelem;
 
   // The head of the pointer of the string, devices.{allow,deny}

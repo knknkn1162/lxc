@@ -446,6 +446,7 @@ static int do_start(void *data)
 	 * a window where the parent can exit before we set the pdeath
 	 * signal leading to a unsupervized container.
 	 */
+  // Set  the  parent  death  signal  of  the  calling  process to arg2
 	if (prctl(PR_SET_PDEATHSIG, SIGKILL, 0, 0, 0)) {
 		SYSERROR("failed to set pdeath signal");
 		return -1;
@@ -460,6 +461,7 @@ static int do_start(void *data)
 		return -1;
 
 	/* Setup the container, ip, names, utsname, ... */
+  // setup_(utsname|network|utsname|network|rootfs|mount|mount_entries|cgroup|console|tty|pivot_root|pts|personality|caps)
 	if (lxc_setup(handler->name, handler->conf)) {
 		ERROR("failed to setup the container");
 		goto out_warn_father;
@@ -475,6 +477,17 @@ static int do_start(void *data)
 
 	/* after this call, we are in error because this
 	 * ops should not return as it execs */
+
+  //  static int start(struct lxc_handler *handler, void* data)
+  //  {
+  //    struct start_args *arg = data;
+  //
+  //    NOTICE("exec'ing '%s'", arg->argv[0]);
+  //
+  //    execvp(arg->argv[0], arg->argv);
+  //    SYSERROR("failed to exec %s", arg->argv[0]);
+  //    return 0;
+  //  }
 	if (handler->ops->start(handler, handler->data))
 		return -1;
 
@@ -511,6 +524,8 @@ int lxc_spawn(struct lxc_handler *handler)
 
 
 	/* Create a process in a new set of namespaces */
+  // child .. do_start
+  // parent .. lxc_sync_fini_child, ...
 	handler->pid = lxc_clone(do_start, handler, clone_flags);
 	if (handler->pid < 0) {
 		SYSERROR("failed to fork into a new namespace");
@@ -576,6 +591,7 @@ int __lxc_start(const char *name, struct lxc_conf *conf,
 	int err = -1;
 	int status;
 
+  // lxc_create_tty, lxc_create_console
 	handler = lxc_init(name, conf);
 	if (!handler) {
 		ERROR("failed to initialize the container");
