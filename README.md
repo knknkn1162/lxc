@@ -46,6 +46,12 @@ end
 
 # how to use
 
+# preparation
+
+```bash
+sudo start-stop-daemon --stop --oknodo --user root --name lxcfs --pidfile /run/lxcfs.pid
+```
+
 ## lxc-create
 
 ```bash
