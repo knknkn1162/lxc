@@ -462,6 +462,7 @@ static int mount_rootfs(const char *rootfs, const char *target)
 		return -1;
 	}
 
+  // /usr/local/lib/lxc/debian01/rootfs/
 	if (stat(absrootfs, &s)) {
 		SYSERROR("failed to stat '%s'", absrootfs);
 		return -1;
@@ -472,7 +473,7 @@ static int mount_rootfs(const char *rootfs, const char *target)
 		if (!__S_ISTYPE(s.st_mode, rtfs_type[i].type))
 			continue;
 
-    // /usr/local/lib/lxc/debian01/rootfs/${target}
+    // /usr/local/lib/lxc/debian01/rootfs/ ${target}
 		return rtfs_type[i].cb(absrootfs, target);
 	}
 
@@ -1032,6 +1033,7 @@ static int mount_entry_on_relative_rootfs(struct mntent *mntent,
 	return ret;
 }
 
+// tmp/file
 static int mount_file_entries(const struct lxc_rootfs *rootfs, FILE *file)
 {
 	struct mntent *mntent;
@@ -1047,6 +1049,7 @@ static int mount_file_entries(const struct lxc_rootfs *rootfs, FILE *file)
 
 		/* We have a separate root, mounts are relative to it */
 		if (mntent->mnt_dir[0] != '/') {
+      // rootfs->mount: /usr/local/lib/lxc/rootfs
 			if (mount_entry_on_relative_rootfs(mntent,
 							   rootfs->mount))
 				goto out;
@@ -1072,6 +1075,7 @@ static int setup_mount(const struct lxc_rootfs *rootfs, const char *fstab)
 	if (!fstab)
 		return 0;
 
+  // FILE *setmntent(const char *filename, const char *type); filename is often
 	file = setmntent(fstab, "r");
 	if (!file) {
 		SYSERROR("failed to use '%s'", fstab);
@@ -1091,6 +1095,7 @@ static int setup_mount_entries(const struct lxc_rootfs *rootfs, struct lxc_list 
 	char *mount_entry;
 	int ret;
 
+  // The tmpfile() function opens a unique temporary file in binary read/write (w+b) mode.
 	file = tmpfile();
 	if (!file) {
 		ERROR("tmpfile error: %m");
@@ -1102,6 +1107,7 @@ static int setup_mount_entries(const struct lxc_rootfs *rootfs, struct lxc_list 
 		fprintf(file, "%s\n", mount_entry);
 	}
 
+  // (void) fseek(stream, 0L, SEEK_SET)
 	rewind(file);
 
 	ret = mount_file_entries(rootfs, file);
@@ -1732,16 +1738,20 @@ int lxc_setup(const char *name, struct lxc_conf *lxc_conf)
 		return -1;
 	}
 
+  // 	if mount_rootfs(rootfs->path, rootfs->mount)) -> mount_rootfs_dir(const char *rootfs, const char *target)
 	if (setup_rootfs(&lxc_conf->rootfs)) {
 		ERROR("failed to setup rootfs for '%s'", name);
 		return -1;
 	}
 
+  // lxc.mount=(null) -> lxc_conf->fstab= (null)
 	if (setup_mount(&lxc_conf->rootfs, lxc_conf->fstab)) {
 		ERROR("failed to setup the mounts for '%s'", name);
 		return -1;
 	}
 
+  // proc /usr/local/lib/lxc/debian01/rootfs/proc proc nodev,noexec,nosuid 0 0
+  // sysfs /usr/local/lib/lxc/debian01/rootfs/sys sysfs defaults  0 0
 	if (setup_mount_entries(&lxc_conf->rootfs, &lxc_conf->mount_list)) {
 		ERROR("failed to setup the mount entries for '%s'", name);
 		return -1;
