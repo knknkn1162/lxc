@@ -55,10 +55,20 @@ apt-get remove lxcfs -y --purge
 
 ## lxc-create
 
+
+Assume that the lxc.conf is set like this:
+
+```conf
+# lxc.conf
+lxc.network.type=veth
+lxc.network.link=br0
+lxc.network.flags=up
+```
+
 ```bash
 $ lxc-create -n debian01 -t debian -f lxc.conf
 This command has to be run as root
-$ lxc-create -n debian01 -t debian -f lxc.conf
+$ sudo lxc-create -n debian01 -t debian
 Warning:
 -------
 Usually the template option is called with a configuration
@@ -104,16 +114,6 @@ The configuration settings are written in the several files. The detail is [here
 
 
 ## lxc-start
-
-
-Assume that the lxc.conf is set like this:
-
-```conf
-# lxc.conf
-lxc.network.type=veth
-lxc.network.link=br0
-lxc.network.flags=up
-```
 
 ```bash
 # create bridge in advance on the host(ubuntu 18.04)
