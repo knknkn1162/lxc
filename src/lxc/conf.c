@@ -250,6 +250,11 @@ static int run_script(const char *name, const char *section,
 	return 0;
 }
 
+/*
+		.rootfs = rootfs,
+		.target = target,
+		.mntopt = mntopt,
+ */
 static int find_fstype_cb(char* buffer, void *data)
 {
 	struct cbarg {
@@ -441,6 +446,7 @@ static int mount_rootfs(const char *rootfs, const char *target)
 		int type;
 		rootfs_cb cb;
 	} rtfs_type[] = {
+    // 	return mount(rootfs, target, "none", MS_BIND | MS_REC, NULL);
 		{ S_IFDIR, mount_rootfs_dir },
 		{ S_IFBLK, mount_rootfs_block },
 		{ S_IFREG, mount_rootfs_file },
@@ -466,6 +472,7 @@ static int mount_rootfs(const char *rootfs, const char *target)
 		if (!__S_ISTYPE(s.st_mode, rtfs_type[i].type))
 			continue;
 
+    // /usr/local/lib/lxc/debian01/rootfs/${target}
 		return rtfs_type[i].cb(absrootfs, target);
 	}
 
@@ -478,6 +485,7 @@ static int setup_utsname(struct utsname *utsname)
 	if (!utsname)
 		return 0;
 
+  // int sethostname(const char *name, size_t len);
 	if (sethostname(utsname->nodename, strlen(utsname->nodename))) {
 		SYSERROR("failed to set the hostname to '%s'", utsname->nodename);
 		return -1;
@@ -702,15 +710,18 @@ static int setup_rootfs_pivot_root(const char *rootfs, const char *pivotdir)
 
 static int setup_rootfs(const struct lxc_rootfs *rootfs)
 {
+  // lxc.rootfs = /usr/local/lib/lxc/debian01/rootfs
 	if (!rootfs->path)
 		return 0;
 
+  // default is new->rootfs.mount = LXCROOTFSMOUNT=/usr/local/lib/lxc/rootfs
 	if (access(rootfs->mount, F_OK)) {
 		SYSERROR("failed to access to '%s', check it is present",
 			 rootfs->mount);
 		return -1;
 	}
 
+  // 280 26 8:1 /usr/local/lib/lxc/debian01/rootfs /usr/local/lib/lxc/rootfs rw,relatime shared:1 - ext4 /dev/sda1 rw,data=ordered
 	if (mount_rootfs(rootfs->path, rootfs->mount)) {
 		ERROR("failed to mount rootfs");
 		return -1;
@@ -1216,6 +1227,7 @@ static int setup_ipv6_addr(struct lxc_list *ip, int ifindex)
 	return 0;
 }
 
+// lxc_netdev_up
 static int setup_netdev(struct lxc_netdev *netdev)
 {
 	char ifname[IFNAMSIZ];
@@ -1321,6 +1333,12 @@ static int setup_network(struct lxc_list *network)
 
 		netdev = iterator->elem;
 
+    /*
+    struct lxc_netdev {
+      int type; int flags; int ifindex; char *link; char *name; char *hwaddr;
+      char *mtu; union netdev_p priv; struct lxc_list ipv4; struct lxc_list ipv6; char *upscript;
+    };
+     */
 		if (setup_netdev(netdev)) {
 			ERROR("failed to setup netdev");
 			return -1;

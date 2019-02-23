@@ -145,6 +145,20 @@ int main(int argc, char *argv[])
 		}
 	}
 
+  /*
+    new->personality = -1;
+    new->console.path = NULL;
+    new->console.peer = -1;
+    new->console.master = -1;
+    new->console.slave = -1;
+    new->console.name[0] = '\0';
+    // LXCROOTFSMOUNT = /usr/local/lib/lxc/rootfs
+    new->rootfs.mount = LXCROOTFSMOUNT;
+    lxc_list_init(&new->cgroup);
+    lxc_list_init(&new->network);
+    lxc_list_init(&new->mount_list);
+    lxc_list_init(&new->caps);
+   */
 	conf = lxc_conf_init();
 	if (!conf) {
 		ERROR("failed to initialize configuration");

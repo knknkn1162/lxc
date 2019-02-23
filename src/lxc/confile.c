@@ -81,9 +81,10 @@ static struct config config[] = {
 	{ "lxc.pts",                  config_pts                  },
 	{ "lxc.tty",                  config_tty                  },
 	{ "lxc.cgroup",               config_cgroup               },
-	{ "lxc.mount",                config_mount                },
-	{ "lxc.rootfs.mount",         config_rootfs_mount         },
-	{ "lxc.rootfs",               config_rootfs               },
+  // default is new->rootfs.mount = LXCROOTFSMOUNT=/usr/local/lib/lxc/rootfs
+	{ "lxc.mount",                config_mount                }, // &lxc_conf->mount_list or lxc_conf->fstab = strdup(value);
+	{ "lxc.rootfs.mount",         config_rootfs_mount         }, // 	lxc_conf->rootfs.mount = strdup(value);
+	{ "lxc.rootfs",               config_rootfs               }, // 	lxc_conf->rootfs.path = strdup(value);
 	{ "lxc.pivotdir",             config_pivotdir             },
 	{ "lxc.utsname",              config_utsname              },
 	{ "lxc.network.type",         config_network_type         },
