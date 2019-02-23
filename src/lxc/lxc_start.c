@@ -197,8 +197,7 @@ struct lxc_conf {
 
 /*
   struct lxc_console {
-    int slave; int master; int peer; char *path; char name[MAXPATHLEN]; struct termios *tios;
-  };
+    int slave; int master; int peer; char *path; char name[MAXPATHLEN]; struct termios *tios; };
  */
 		conf->console.path = strdup(console);
 		if (!conf->console.path) {

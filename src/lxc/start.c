@@ -438,7 +438,7 @@ void lxc_abort(const char *name, struct lxc_handler *handler)
 		kill(handler->pid, SIGKILL);
 }
 
-// do_start(handler)
+// do_start(handler) .. lxc_setup & handler->ops->start(handler, handler->data)[exec]
 static int do_start(void *data)
 {
 	struct lxc_handler *handler = data;
@@ -466,6 +466,12 @@ static int do_start(void *data)
 	/* Tell the parent task it can begin to configure the
 	 * container and wait for it to finish
 	 */
+
+  // If write fails
+	//if (__sync_wake(handler->sv[0], LXC_SYNC_CONFIGURE))
+	//	return -1;
+  ////  read
+	//return __sync_wait(fd, LXC_SYNC_POST_CONFIGURE);
 	if (lxc_sync_barrier_parent(handler, LXC_SYNC_CONFIGURE))
 		return -1;
 
@@ -500,6 +506,7 @@ static int do_start(void *data)
 		return -1;
 
 out_warn_father:
+  // 	if (write(fd, &sync, sizeof(LXC_SYNC_POST_CONFIGURE)) < 0) {
 	lxc_sync_wake_parent(handler, LXC_SYNC_POST_CONFIGURE);
 	return -1;
 }
@@ -544,7 +551,7 @@ int lxc_spawn(struct lxc_handler *handler)
   // close the other side of the socket.
 	lxc_sync_fini_child(handler);
 
-  // 	ret = read(fd, &sync, sizeof(sync));
+  //ret = read(handler->sv[1], &sync, sizeof(sync));
 	if (lxc_sync_wait_child(handler, LXC_SYNC_CONFIGURE))
 		failed_before_rename = 1;
 
@@ -565,7 +572,11 @@ int lxc_spawn(struct lxc_handler *handler)
 	/* Tell the child to continue its initialization and wait for
 	 * it to exec or return an error
 	 */
-  // wait until LXC_SYNC_POST_CONFIGURE receives from handler->sv[0].
+  // write
+	//if (__sync_wake(handler->sv[1], LXC_SYNC_POST_CONFIGURE))
+	//	return -1;
+  //// read
+	//return __sync_wait(fd, LXC_SYNC_RESTART);
 	if (lxc_sync_barrier_child(handler, LXC_SYNC_POST_CONFIGURE))
 		return -1;
 
