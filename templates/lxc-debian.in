@@ -287,7 +287,7 @@ EOF
     return 0
 }
 
-${templatedir}/lxc-$lxc_template --path=$lxc_path/$lxc_name --name=$lxc_name
+#${templatedir}/lxc-$lxc_template --path=$lxc_path/$lxc_name --name=$lxc_name
 options=$(getopt -o hp:n:c -l help,path:,name:,clean -- "$@")
 if [ $? -ne 0 ]; then
         usage $(basename $0)
