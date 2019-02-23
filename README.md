@@ -48,7 +48,9 @@ end
 # preparation
 
 ```bash
+# lxcfs(https://github.com/lxc/lxcfs) has introduced since LXC1.1, so we don't have to need one.
 sudo start-stop-daemon --stop --oknodo --user root --name lxcfs --pidfile /run/lxcfs.pid
+apt-get remove lxcfs -y --purge
 ```
 
 ## lxc-create
