@@ -41,6 +41,7 @@ int lxc_af_unix_open(const char *path, int type, int flags)
 	if (flags & O_TRUNC)
 		unlink(path);
 
+  // int socket(int domain, int type, int protocol);
 	fd = socket(PF_UNIX, type, 0);
 	if (fd < 0)
 		return -1;

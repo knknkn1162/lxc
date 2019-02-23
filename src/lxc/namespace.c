@@ -59,6 +59,7 @@ static int do_clone(void *arg)
 	return clone_arg->fn(clone_arg->arg);
 }
 
+// 	handler->pid = lxc_clone(do_start, handler, clone_flags);
 pid_t lxc_clone(int (*fn)(void *), void *arg, int flags)
 {
 	struct clone_arg clone_arg = {
@@ -74,6 +75,7 @@ pid_t lxc_clone(int (*fn)(void *), void *arg, int flags)
 	ret = __clone2(do_clone, stack,
 		       stack_size, flags | SIGCHLD, &clone_arg);
 #else
+  // do_start(handler)
 	ret = clone(do_clone, stack, flags | SIGCHLD, &clone_arg);
 #endif
 	if (ret < 0)

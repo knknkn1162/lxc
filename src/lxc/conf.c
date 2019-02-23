@@ -1556,6 +1556,11 @@ int lxc_create_network(struct lxc_handler *handler)
 {
 	struct lxc_list *network = &handler->conf->network;
 	struct lxc_list *iterator;
+
+  //struct lxc_netdev {
+  // int type; int flags; int ifindex; char *link; char *name;
+  // char *hwaddr; char *mtu; union netdev_p priv;
+  // struct lxc_list ipv4; struct lxc_list ipv6; char *upscript; };
 	struct lxc_netdev *netdev;
 
 	lxc_list_for_each(iterator, network) {
@@ -1568,6 +1573,8 @@ int lxc_create_network(struct lxc_handler *handler)
 			return -1;
 		}
 
+    // static int instanciate_cb(struct lxc_handler *, struct lxc_netdev *);
+    // instanciate_veth, instanciate_macvlan, instanciate_vlan, instanciate_phys, instanciate_empty,
 		if (netdev_conf[netdev->type](handler, netdev)) {
 			ERROR("failed to create netdev");
 			return -1;

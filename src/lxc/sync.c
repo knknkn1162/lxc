@@ -67,8 +67,10 @@ static int __sync_wake(int fd, int sequence)
 
 static int __sync_barrier(int fd, int sequence)
 {
+  // If write fails
 	if (__sync_wake(fd, sequence))
 		return -1;
+  //  read
 	return __sync_wait(fd, sequence+1);
 }
 

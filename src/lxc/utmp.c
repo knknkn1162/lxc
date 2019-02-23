@@ -220,6 +220,10 @@ int lxc_utmp_mainloop_add(struct lxc_epoll_descr *descr,
 {
 	char path[MAXPATHLEN];
 	int fd, wd;
+  /*
+struct lxc_utmp {
+	struct lxc_handler *handler; char container_state; int timer_fd; int prev_runlevel, curr_runlevel; };
+   */
 	struct lxc_utmp *utmp_data;
 	struct lxc_conf *conf = handler->conf;
 

@@ -71,6 +71,7 @@ int lxc_mainloop(struct lxc_epoll_descr *descr)
 	}
 }
 
+// 	if (lxc_mainloop_add_handler(&descr, sigfd, signal_handler, &pid)) {
 int lxc_mainloop_add_handler(struct lxc_epoll_descr *descr, int fd, 
 			     lxc_mainloop_callback_t callback, void *data)
 {

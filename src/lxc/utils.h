@@ -43,6 +43,7 @@
 		sigaction(s, &sa, &lxc_tty_sa_##s); \
 	} while (0)
 
+// int sigaction(int signum, const struct sigaction *act, struct sigaction *oldact);
 #define LXC_TTY_DEL_HANDLER(s) \
 	do { \
 		sigaction(s, &lxc_tty_sa_##s, NULL); \

@@ -289,6 +289,7 @@ static int console_handler(int fd, void *data, struct lxc_epoll_descr *descr)
 	return 0;
 }
 
+// add console->master, console->peer in epoll
 int lxc_console_mainloop_add(struct lxc_epoll_descr *descr,
 			     struct lxc_handler *handler)
 {
