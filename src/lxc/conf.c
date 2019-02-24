@@ -729,6 +729,12 @@ static int setup_rootfs(const struct lxc_rootfs *rootfs)
 		return -1;
 	}
 
+	// See https://github.com/cloudfoundry-attic/garden-linux/issues/45#issuecomment-104187168 & mounts() in https://blog.lizzie.io/linux-containers-in-500-loc/contained.c
+	if (mount(NULL, "/", NULL, MS_REC | MS_PRIVATE, NULL)) {
+		fprintf(stderr, "failed! %m\n");
+		return -1;
+	}
+
   // 280 26 8:1 /usr/local/lib/lxc/debian01/rootfs /usr/local/lib/lxc/rootfs rw,relatime shared:1 - ext4 /dev/sda1 rw,data=ordered
 	if (mount_rootfs(rootfs->path, rootfs->mount)) {
 		ERROR("failed to mount rootfs");
