@@ -48,6 +48,7 @@ end
 # preparation
 
 ```bash
+# 226 26 0:45 / /var/lib/lxcfs rw,nosuid,nodev,relatime shared:112 - fuse.lxcfs lxcfs rw,user_id=0,group_id=0,allow_other
 # lxcfs(https://github.com/lxc/lxcfs) has introduced since LXC1.1, so we don't have to need one.
 sudo start-stop-daemon --stop --oknodo --user root --name lxcfs --pidfile /run/lxcfs.pid
 apt-get remove lxcfs -y --purge

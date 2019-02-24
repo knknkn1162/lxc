@@ -583,6 +583,7 @@ static int config_cgroup(const char *key, char *value, struct lxc_conf *lxc_conf
 		return -1;
 	}
 
+  // devices.allow, devices.deny
 	cgelem->subsystem = strdup(subkey);
 	cgelem->value = strdup(value);
 	cglist->elem = cgelem;

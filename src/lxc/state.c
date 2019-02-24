@@ -43,6 +43,10 @@ static char *strstate[] = {
 	"STOPPED", "STARTING", "RUNNING", "STOPPING",
 	"ABORTING", "FREEZING", "FROZEN", "THAWED",
 };
+//typedef enum {
+//	STOPPED, STARTING, RUNNING, STOPPING,
+//	ABORTING, FREEZING, FROZEN, THAWED, MAX_STATE,
+//} lxc_state_t;
 
 const char *lxc_state2str(lxc_state_t state)
 {
@@ -71,6 +75,7 @@ static int freezer_state(const char *name)
 	FILE *file;
 	int err;
 
+  // nsgroup : /sys/fs/cgroup/systemd/${container_name}
 	err = lxc_cgroup_path_get(&nsgroup, name);
 	if (err)
 		return -1;
@@ -100,6 +105,10 @@ static lxc_state_t __lxc_getstate(const char *name)
 
 	int ret, stopped = 0;
 
+  // 	ret = receive_answer(sock, &command->answer);
+	//sock = lxc_af_unix_connect(path);
+	//if (sock < 0 && errno == ECONNREFUSED) {
+	//	*stopped = 1;
 	ret = lxc_command(name, &command, &stopped);
 	if (ret < 0 && stopped)
 		return STOPPED;

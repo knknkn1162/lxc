@@ -107,6 +107,7 @@ int lxc_sync_init(struct lxc_handler *handler)
 	}
 
 	/* Be sure we don't inherit this after the exec */
+  // see handler->ops->start() in lxc_spawn
 	fcntl(handler->sv[0], F_SETFD, FD_CLOEXEC);
 
 	return 0;

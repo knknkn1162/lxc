@@ -56,6 +56,7 @@
 
 lxc_log_define(lxc_commands, lxc);
 
+// LXCPATH = /usr/local/lib/lxc
 #define abstractname LXCPATH "/%s/command"
 
 static int receive_answer(int sock, struct lxc_answer *answer)
@@ -69,6 +70,12 @@ static int receive_answer(int sock, struct lxc_answer *answer)
 	return ret;
 }
 
+/*
+struct lxc_command {
+	struct lxc_request request;
+	struct lxc_answer answer;
+};
+ */
 static int __lxc_command(const char *name, struct lxc_command *command,
 			 int *stopped, int stay_connected)
 {
@@ -76,6 +83,7 @@ static int __lxc_command(const char *name, struct lxc_command *command,
 	char path[sizeof(((struct sockaddr_un *)0)->sun_path)] = { 0 };
 	char *offset = &path[1];
 
+  // #define abstractname LXCPATH "/%s/command" where LXCPATH=/usr/local/lib/lxc
 	sprintf(offset, abstractname, name);
 
 	sock = lxc_af_unix_connect(path);

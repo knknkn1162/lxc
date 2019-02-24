@@ -71,6 +71,7 @@ static int get_cgroup_mount(const char *mtab, char *mnt)
         while ((mntent = getmntent(file))) {
 
           /* there is a cgroup mounted named "lxc" */
+          // if lxc is already exists, mnt <- mnt_dir
           if (!strcmp(mntent->mnt_fsname, "lxc") &&
               !strcmp(mntent->mnt_type, "cgroup")) {
             strcpy(mnt, mntent->mnt_dir);
@@ -79,12 +80,16 @@ static int get_cgroup_mount(const char *mtab, char *mnt)
           }
 
           /* fallback to the first non-lxc cgroup found */
+          // if mnt_type = cgroup
+          // find first element that meets
           if (!strcmp(mntent->mnt_type, "cgroup") && err) {
+            // strcpy(dst, src);
             strcpy(mnt, mntent->mnt_dir);
             err = 0;
           }
         };
 
+  // using cgoupr mounted at /sys/fs/cgroup/systemd
 	DEBUG("using cgroup mounted at '%s'", mnt);
 
         fclose(file);
@@ -135,6 +140,7 @@ static int get_cgroup_flags(const char *mtab, int *flags)
 		}
         };
 
+  // cgroup flags is 0x2
 	DEBUG("cgroup flags is 0x%x", *flags);
 
         fclose(file);
@@ -179,12 +185,14 @@ static int cgroup_enable_clone_children(const char *path)
 	return ret;
 }
 
+// 	/* Let's add the pid to the 'tasks' file */
 static int cgroup_attach(const char *path, pid_t pid)
 {
 	FILE *f;
 	char tasks[MAXPATHLEN];
 	int ret = 0;
 
+  // cgname : /sys/fs/cgroup/systemd/${container_name}/tasks
 	snprintf(tasks, MAXPATHLEN, "%s/tasks", path);
 
 	f = fopen(tasks, "w");
@@ -203,6 +211,7 @@ static int cgroup_attach(const char *path, pid_t pid)
 	return ret;
 }
 
+// pid: child_pid that clone generates
 int lxc_cgroup_create(const char *name, pid_t pid)
 {
 	char cgmnt[MAXPATHLEN];
@@ -211,11 +220,25 @@ int lxc_cgroup_create(const char *name, pid_t pid)
 	int flags;
 
   // #define MTAB "/proc/mounts", "/proc/self/mounts"
+  // cgroup /sys/fs/cgroup/unified cgroup2 rw,nosuid,nodev,noexec,relatime 0 0
+  // cgroup /sys/fs/cgroup/systemd cgroup rw,nosuid,nodev,noexec,relatime,xattr,name=systemd 0 0
+  // cgroup /sys/fs/cgroup/cpuset cgroup rw,nosuid,nodev,noexec,relatime,cpuset 0 0
+  // cgroup /sys/fs/cgroup/net_cls,net_prio cgroup rw,nosuid,nodev,noexec,relatime,net_cls,net_prio 0 0
+  // cgroup /sys/fs/cgroup/freezer cgroup rw,nosuid,nodev,noexec,relatime,freezer 0 0
+  // cgroup /sys/fs/cgroup/rdma cgroup rw,nosuid,nodev,noexec,relatime,rdma 0 0
+  // cgroup /sys/fs/cgroup/perf_event cgroup rw,nosuid,nodev,noexec,relatime,perf_event 0 0
+  // cgroup /sys/fs/cgroup/blkio cgroup rw,nosuid,nodev,noexec,relatime,blkio 0 0
+  // cgroup /sys/fs/cgroup/memory cgroup rw,nosuid,nodev,noexec,relatime,memory 0 0
+  // cgroup /sys/fs/cgroup/cpu,cpuacct cgroup rw,nosuid,nodev,noexec,relatime,cpu,cpuacct 0 0
+  // cgroup /sys/fs/cgroup/hugetlb cgroup rw,nosuid,nodev,noexec,relatime,hugetlb 0 0
+  // cgroup /sys/fs/cgroup/pids cgroup rw,nosuid,nodev,noexec,relatime,pids 0 0
+  // cgroup /sys/fs/cgroup/devices cgroup rw,nosuid,nodev,noexec,relatime,devices 0 0
 	if (get_cgroup_mount(MTAB, cgmnt)) {
 		ERROR("cgroup is not mounted");
 		return -1;
 	}
 
+  // cgname : /sys/fs/cgroup/systemd/${container_name}
 	snprintf(cgname, MAXPATHLEN, "%s/%s", cgmnt, name);
 
 	/*
@@ -227,6 +250,8 @@ int lxc_cgroup_create(const char *name, pid_t pid)
 		return -1;
 	}
 
+  //   // cgroup flags is 0x2
+  // rw,nosuid,nodev,noexec,relatime,xattr,name=systemd
 	if (get_cgroup_flags(MTAB, &flags)) {
 		SYSERROR("failed to get cgroup flags");
 		return -1;
@@ -262,6 +287,7 @@ int lxc_cgroup_create(const char *name, pid_t pid)
 	}
 
 	/* Let's add the pid to the 'tasks' file */
+  // detach process from systemd cgroup
 	if (cgroup_attach(cgname, pid)) {
 		SYSERROR("failed to attach pid '%d' to '%s'", pid, cgname);
 		rmdir(cgname);
@@ -309,6 +335,7 @@ int lxc_cgroup_path_get(char **path, const char *name)
 		return -1;
 	}
 
+  // cgroup : /sys/fs/cgroup/systemd/${container_name}
 	snprintf(nsgroup_path, MAXPATHLEN, "%s/%s", cgroup, name);
 	return 0;
 }

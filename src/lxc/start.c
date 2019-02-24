@@ -555,6 +555,7 @@ int lxc_spawn(struct lxc_handler *handler)
 	if (lxc_sync_wait_child(handler, LXC_SYNC_CONFIGURE))
 		failed_before_rename = 1;
 
+  // pid: child_pid
 	if (lxc_cgroup_create(name, handler->pid))
 		goto out_delete_net;
 
@@ -580,6 +581,7 @@ int lxc_spawn(struct lxc_handler *handler)
 	if (lxc_sync_barrier_child(handler, LXC_SYNC_POST_CONFIGURE))
 		return -1;
 
+  // 	NOTICE("'%s' started with pid '%d'", arg->argv[0], handler->pid);
 	if (handler->ops->post_start(handler, handler->data))
 		goto out_abort;
 
@@ -593,7 +595,7 @@ int lxc_spawn(struct lxc_handler *handler)
 	return 0;
 
 out_delete_net:
-	i (clone_flags & CLONE_NEWNET)
+	if (clone_flags & CLONE_NEWNET)
 		lxc_delete_network(&handler->conf->network);
 out_abort:
 	lxc_abort(name, handler);
@@ -699,5 +701,6 @@ int lxc_start(const char *name, char *const argv[], struct lxc_conf *conf)
 	if (lxc_check_inherited(-1))
 		return -1;
 
+  // name: container name
 	return __lxc_start(name, conf, &start_ops, &start_arg);
 }
