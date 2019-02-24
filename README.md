@@ -127,6 +127,20 @@ $ sudo lxc-start --name=debian01 --  /bin/bash
 
 # after use
 $ sudo ip link delete br0 type bridge
+
+$ sudo lxc-start --logpriority=TRACE --logfile="log.log" --name=debian01 -- /bin/bash
+$ cat ~/shared/log.log
+      lxc-start 1550918557.492 DEBUG    lxc_start - sigchild handler set
+      lxc-start 1550918557.492 INFO     lxc_start - 'debian01' is initialized
+      lxc-start 1550918557.493 DEBUG    lxc_cgroup - using cgroup mounted at '/sys/fs/cgroup/systemd'
+      lxc-start 1550918557.493 DEBUG    lxc_cgroup - cgroup flags is 0x2
+      lxc-start 1550918557.494 INFO     lxc_conf - mount points have been setup
+      lxc-start 1550918557.494 DEBUG    lxc_conf - capabilities has been setup
+      lxc-start 1550918557.494 NOTICE   lxc_conf - 'debian01' is setup.
+      lxc-start 1550918557.494 NOTICE   lxc_start - exec'ing '/bin/bash'
+      lxc-start 1550918557.494 NOTICE   lxc_start - '/bin/bash' started with pid '2058'
+      lxc-start 1550918557.495 INFO     lxc_console - no rootfs, no console.
+root@ubuntu-bionic:~/shared#
 ```
 
 ### From the host

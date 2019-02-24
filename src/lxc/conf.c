@@ -306,6 +306,7 @@ static int mount_unknow_fs(const char *rootfs, const char *target, int mntopt)
 	 * first we check with /etc/filesystems, in case the modules
 	 * are auto-loaded and fall back to the supported kernel fs
 	 */
+  // Mount uses the blkid library for guessing the filesystem type; if that does not turn up anything that looks familiar, mount will try to read the file /etc/filesystems, or, if that does not exist, /proc/filesystems.
 	char *fsfile[] = {
 		"/etc/filesystems",
 		"/proc/filesystems",
@@ -517,6 +518,8 @@ static int setup_tty(const struct lxc_rootfs *rootfs,
 		 * to check the file is present or not because it fails
 		 * with EACCES errno and I don't know why :( */
 
+    // devpts /usr/local/lib/lxc/debian01/rootfs/dev/tty%d devpts rw,nosuid,noexec,relatime,gid=5,mode=620,ptmxmode=000 0 0
+    // devpts /usr/local/lib/lxc/rootfs/dev/tty%d devpts rw,nosuid,noexec,relatime,gid=5,mode=620,ptmxmode=000 0 0
 		if (mount(pty_info->name, path, "none", MS_BIND, 0)) {
 			WARN("failed to mount '%s'->'%s'",
 			     pty_info->name, path);
@@ -654,6 +657,7 @@ static int umount_oldrootfs(const char *oldrootfs)
 	return 0;
 }
 
+// setup_rootfs_pivot_root(rootfs->mount, rootfs->pivot
 static int setup_rootfs_pivot_root(const char *rootfs, const char *pivotdir)
 {
 	char path[MAXPATHLEN];
@@ -682,9 +686,12 @@ static int setup_rootfs_pivot_root(const char *rootfs, const char *pivotdir)
 		DEBUG("created '%s' directory", path);
 	}
 
+  // /usr/local/lib/lxc/rootfs/mnt
 	DEBUG("mountpoint for old rootfs is '%s'", path);
 
 	/* pivot_root into our new root fs */
+  // int pivot_root(const char *new_root, const char *put_old);
+  // Be sure that `put_old is not underneath new_root.` or EINVAL.
 	if (pivot_root(".", path)) {
 		SYSERROR("pivot_root syscall failed");
 		return -1;
@@ -733,6 +740,7 @@ static int setup_rootfs(const struct lxc_rootfs *rootfs)
 	return 0;
 }
 
+// 	setup_pivot_root(&lxc_conf->rootfs)
 int setup_pivot_root(const struct lxc_rootfs *rootfs)
 {
 	if (!rootfs->path)

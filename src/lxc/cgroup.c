@@ -57,6 +57,8 @@ enum {
 // get_cgroup_mount(MTAB, cgmnt)
 static int get_cgroup_mount(const char *mtab, char *mnt)
 {
+  /* struct mntent {
+    char *mnt_fsname; char *mnt_dir; char *mnt_type; char *mnt_opts; int mnt_freq; int mnt_passno; }; */
         struct mntent *mntent;
         FILE *file = NULL;
         int err = -1;
@@ -237,6 +239,7 @@ int lxc_cgroup_create(const char *name, pid_t pid)
   // cgroup /sys/fs/cgroup/hugetlb cgroup rw,nosuid,nodev,noexec,relatime,hugetlb 0 0
   // cgroup /sys/fs/cgroup/pids cgroup rw,nosuid,nodev,noexec,relatime,pids 0 0
   // cgroup /sys/fs/cgroup/devices cgroup rw,nosuid,nodev,noexec,relatime,devices 0 0
+  // cgmnt .. /sys/fs/cgroup/systemd
 	if (get_cgroup_mount(MTAB, cgmnt)) {
 		ERROR("cgroup is not mounted");
 		return -1;
@@ -273,12 +276,14 @@ int lxc_cgroup_create(const char *name, pid_t pid)
 	 * no clone_children neither ns_cgroup, that means the cgroup is mounted
 	 * without the ns_cgroup and it has not the compatibility flag
 	 */
+  // if you cannot access cgroup.clone_children
 	if (access(clonechild, F_OK)) {
 		ERROR("no ns_cgroup option specified");
 		return -1;
 	}
 
 	/* we enable the clone_children flag of the cgroup */
+  // /sys/fs/cgroup/systemd/cgroup.clone_children
 	if (cgroup_enable_clone_children(clonechild)) {
 		SYSERROR("failed to enable 'clone_children flag");
 		return -1;
@@ -292,6 +297,10 @@ int lxc_cgroup_create(const char *name, pid_t pid)
 
 	/* Let's add the pid to the 'tasks' file */
   // detach process from systemd cgroup
+  // add pid to the file,/sys/fs/cgroup/systemd/${container_name}/tasks
+
+  // echo ${child_pid} > /sys/fs/cgroup/systemd/${container_name}/tasks
+  // pid belongs to `/sys/fs/cgroup/systemd/${container_name}` not to `/sys/fs/cgroup/systemd`.
 	if (cgroup_attach(cgname, pid)) {
 		SYSERROR("failed to attach pid '%d' to '%s'", pid, cgname);
 		rmdir(cgname);
@@ -352,6 +361,7 @@ int lxc_cgroup_set(const char *name, const char *subsystem, const char *value)
 	char path[MAXPATHLEN];
 
   // put ${rootfs}/sys/fs/cgroup/systemd/debian01 in `name` variable
+  // DEBUG  lxc_cgroup - using cgroup mounted at '/sys/fs/cgroup/systemd'
 	ret = lxc_cgroup_path_get(&nsgroup, name);
 	if (ret)
 		return -1;

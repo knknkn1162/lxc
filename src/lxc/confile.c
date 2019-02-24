@@ -85,7 +85,7 @@ static struct config config[] = {
 	{ "lxc.mount",                config_mount                }, // &lxc_conf->mount_list or lxc_conf->fstab = strdup(value);
 	{ "lxc.rootfs.mount",         config_rootfs_mount         }, // 	lxc_conf->rootfs.mount = strdup(value);
 	{ "lxc.rootfs",               config_rootfs               }, // 	lxc_conf->rootfs.path = strdup(value);
-	{ "lxc.pivotdir",             config_pivotdir             },
+	{ "lxc.pivotdir",             config_pivotdir             }, // 	lxc_conf->rootfs.pivot = strdup(value);
 	{ "lxc.utsname",              config_utsname              },
 	{ "lxc.network.type",         config_network_type         },
 	{ "lxc.network.flags",        config_network_flags        },
