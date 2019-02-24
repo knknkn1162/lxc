@@ -74,18 +74,22 @@ static int get_cgroup_mount(const char *mtab, char *mnt)
           // if lxc is already exists, mnt <- mnt_dir
           if (!strcmp(mntent->mnt_fsname, "lxc") &&
               !strcmp(mntent->mnt_type, "cgroup")) {
-            strcpy(mnt, mntent->mnt_dir);
-            err = 0;
-            break;
+            if(strstr(mntent->mnt_opts, "devices")) {
+              strcpy(mnt, mntent->mnt_dir);
+              err = 0;
+              break;
+            }
           }
 
           /* fallback to the first non-lxc cgroup found */
           // if mnt_type = cgroup
           // find first element that meets
           if (!strcmp(mntent->mnt_type, "cgroup") && err) {
-            // strcpy(dst, src);
-            strcpy(mnt, mntent->mnt_dir);
-            err = 0;
+            if(strstr(mntent->mnt_opts, "devices")) {
+              // strcpy(dst, src);
+              strcpy(mnt, mntent->mnt_dir);
+              err = 0;
+            }
           }
         };
 
