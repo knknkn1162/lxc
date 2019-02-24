@@ -89,6 +89,7 @@ static int utmp_handler(int fd, void *data, struct lxc_epoll_descr *descr)
 	 */
 	char buffer[MAXPATHLEN];
 
+  // Get the number of bytes in the input buffer.
 	if (ioctl(fd, FIONREAD, &size) < 0) {
 		SYSERROR("cannot determine the size of this notification");
 		return -1;
@@ -164,6 +165,7 @@ out:
 	return 0;
 }
 
+// The utmp file allows one to discover information about who is currently using the system.
 static int utmp_get_runlevel(struct lxc_utmp *utmp_data)
 {
 	struct utmpx *utmpx;
@@ -266,6 +268,7 @@ struct lxc_utmp {
 
 	}
 
+  // /proc/${child_pid}/root/var/run
 	wd = inotify_add_watch(fd, path, IN_MODIFY | IN_CREATE);
 	if (wd < 0) {
 		SYSERROR("failed to add watch for '%s'", path);

@@ -310,31 +310,35 @@ int lxc_poll(const char *name, struct lxc_handler *handler)
 	}
 
   // epoll_ctl(descr->epfd, EPOLL_CTL_ADD, pid, &ev) < 0)
+  // handler->callback = signal_handler;
 	if (lxc_mainloop_add_handler(&descr, sigfd, signal_handler, &pid)) {
 		ERROR("failed to add handler for the signal");
 		goto out_mainloop_open;
 	}
 
   // // epoll_ctl console->master, console->peer in epoll
+  // console_handler
 	if (lxc_console_mainloop_add(&descr, handler)) {
 		ERROR("failed to add console handler to mainloop");
 		goto out_mainloop_open;
 	}
 
   // epoll_ctl af_unix
+  // incoming_command_handler -> command_handler
 	if (lxc_command_mainloop_add(name, &descr, handler)) {
 		ERROR("failed to add command handler to mainloop");
 		goto out_mainloop_open;
 	}
 
   // fd = inotify_init(); conf->rootfs.path
+  // utmp_handler
 	if (lxc_utmp_mainloop_add(&descr, handler)) {
 		ERROR("failed to add utmp handler to mainloop");
 		goto out_mainloop_open;
 	}
 
   /* struct lxc_epoll_descr { int epfd; struct lxc_list handlers; }; */
-  // epoll_wait
+  // epoll_wait and handler->callback(handler->fd, handler->data, descr)
 	return lxc_mainloop(&descr);
 
 out_mainloop_open:
@@ -502,6 +506,7 @@ static int do_start(void *data)
   //    SYSERROR("failed to exec %s", arg->argv[0]);
   //    return 0;
   //  }
+  //  exec'ing '/bin/bash'
 	if (handler->ops->start(handler, handler->data))
 		return -1;
 

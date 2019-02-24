@@ -143,6 +143,7 @@ static int get_default_console(char **console)
 {
 	int fd;
 
+  // if exists
 	if (!access("/dev/tty", F_OK)) {
 		fd = open("/dev/tty", O_RDWR);
 		if (fd > 0) {
@@ -175,6 +176,7 @@ int lxc_create_console(struct lxc_conf *conf)
 	if (!conf->rootfs.path)
 		return 0;
 
+  // /dev/tty
 	if (!console->path && get_default_console(&console->path)) {
 		ERROR("failed to get default console");
 		return -1;
@@ -218,6 +220,7 @@ int lxc_create_console(struct lxc_conf *conf)
 	}
 
 	/* Get termios */
+  // int tcgetattr(int fd, struct termios *termios_p);
 	if (tcgetattr(console->peer, console->tios)) {
 		SYSERROR("failed to get current terminal settings");
 		goto err_free;

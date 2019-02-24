@@ -32,7 +32,9 @@ AC_ARG_ENABLE([examples],
 
 AM_CONDITIONAL([ENABLE_EXAMPLES], [test "x$enable_examples" = "xyes"])
 
+# /usr/local
 AS_AC_EXPAND(PREFIX, $prefix)
+# EPREFIX/lib
 AS_AC_EXPAND(LIBDIR, $libdir)
 AS_AC_EXPAND(BINDIR, $bindir)
 AS_AC_EXPAND(INCLUDEDIR, $includedir)
@@ -56,6 +58,7 @@ AC_ARG_WITH([rootfs-path],
 AS_AC_EXPAND(LXC_GENERATE_DATE, "$(date)")
 
 AS_AC_EXPAND(LXCPATH, "${with_config_path}")
+# ${libdir}/lxc/rootfs
 AS_AC_EXPAND(LXCROOTFSMOUNT, "${with_rootfs_path}")
 AS_AC_EXPAND(LXCINITDIR, $libdir/lxc)
 AS_AC_EXPAND(LXCTEMPLATEDIR, $libdir/lxc/templates)

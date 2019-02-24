@@ -279,6 +279,7 @@ extern int lxc_command_mainloop_add(const char *name,
 
 	sprintf(offset, abstractname, name);
 
+  // 	fd = socket(PF_UNIX, type, 0);
 	fd = lxc_af_unix_open(path, SOCK_STREAM, 0);
 	if (fd < 0) {
 		ERROR("failed to create the command service point");

@@ -657,13 +657,15 @@ static int umount_oldrootfs(const char *oldrootfs)
 	return 0;
 }
 
-// setup_rootfs_pivot_root(rootfs->mount, rootfs->pivot
+// setup_rootfs_pivot_root(rootfs->mount, rootfs->pivot)
+// DEFAULT: new->rootfs.mount = LXCROOTFSMOUNT;
 static int setup_rootfs_pivot_root(const char *rootfs, const char *pivotdir)
 {
 	char path[MAXPATHLEN];
 	int remove_pivotdir = 0;
 
 	/* change into new root fs */
+  // /usr/local/lib/lxc/rootfs
 	if (chdir(rootfs)) {
 		SYSERROR("can't chdir to new rootfs '%s'", rootfs);
 		return -1;
@@ -691,7 +693,7 @@ static int setup_rootfs_pivot_root(const char *rootfs, const char *pivotdir)
 
 	/* pivot_root into our new root fs */
   // int pivot_root(const char *new_root, const char *put_old);
-  // Be sure that `put_old is not underneath new_root.` or EINVAL.
+  // Be sure that `put_old is underneath new_root.` or EINVAL.
 	if (pivot_root(".", path)) {
 		SYSERROR("pivot_root syscall failed");
 		return -1;
@@ -736,6 +738,10 @@ static int setup_rootfs(const struct lxc_rootfs *rootfs)
 	}
 
   // 280 26 8:1 /usr/local/lib/lxc/debian01/rootfs /usr/local/lib/lxc/rootfs rw,relatime shared:1 - ext4 /dev/sda1 rw,data=ordered
+  // /proc/self/mounts
+  // // /dev/sda1 /usr/local/lib/lxc/rootfs ext4 rw,relatime,data=ordered 0 0
+  // /proc/self/mountinfo
+  // // 304 26 8:1 /usr/local/lib/lxc/debian01/rootfs /usr/local/lib/lxc/rootfs rw,relatime shared:1 - ext4 /dev/sda1 rw,data=ordered
 	if (mount_rootfs(rootfs->path, rootfs->mount)) {
 		ERROR("failed to mount rootfs");
 		return -1;
@@ -779,6 +785,7 @@ static int setup_pts(int pts)
 	}
 
 	if (access("/dev/ptmx", F_OK)) {
+    // int symlink(const char *target, const char *linkpath);
 		if (!symlink("/dev/pts/ptmx", "/dev/ptmx"))
 			goto out;
 		SYSERROR("failed to symlink '/dev/pts/ptmx'->'/dev/ptmx'");
@@ -800,6 +807,7 @@ out:
 	return 0;
 }
 
+// default: new->personality = -1;
 static int setup_personality(int persona)
 {
 	if (persona == -1)
@@ -1136,6 +1144,7 @@ static int setup_caps(struct lxc_list *caps)
 	char *drop_entry;
 	int i, capid;
 
+  // nothing if not set
 	lxc_list_for_each(iterator, caps) {
 
 		drop_entry = iterator->elem;
