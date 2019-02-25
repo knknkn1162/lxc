@@ -188,6 +188,8 @@ int lxc_create_console(struct lxc_conf *conf)
 		SYSERROR("failed to allocate a pty");
 		return -1;
 	}
+	DEBUG("[console] allocated pty '%s' (%d/%d)",
+		console->name, console->master, console->slave);
 
 	if (fcntl(console->master, F_SETFD, FD_CLOEXEC)) {
 		SYSERROR("failed to set console master to close-on-exec");
