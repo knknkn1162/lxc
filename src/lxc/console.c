@@ -231,9 +231,16 @@ int lxc_create_console(struct lxc_conf *conf)
 
 	/* Remove the echo characters and signal reception, the echo
 	 * will be done below with master proxying */
+  // Ignore BREAK condition
 	tios.c_iflag &= ~IGNBRK;
+  // Signal interrupt (SIGINT) on BREAK condition
 	tios.c_iflag &= BRKINT;
+  // disable
+  // // ECHO .. Echo input characters
+  // // ICANON .. Canonical mode (line-by-line) input
+  // // ISIG .. Enable signal-generating characters (INTR, QUIT, SUSP)
 	tios.c_lflag &= ~(ECHO|ICANON|ISIG);
+  // take one character
 	tios.c_cc[VMIN] = 1;
 	tios.c_cc[VTIME] = 0;
 
