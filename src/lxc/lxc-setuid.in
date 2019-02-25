@@ -65,6 +65,7 @@ lxc_dropuid()
     setuid -r @BINDIR@/lxc-unshare
     setuid -r @BINDIR@/lxc-netstat
     setuid -r @BINDIR@/lxc-checkpoint
+    # LXCINITDIR = /usr/local/lib/lxc
     setuid -r @LXCINITDIR@/lxc-init
 
     chmod 0755 @LXCPATH@

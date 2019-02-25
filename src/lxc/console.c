@@ -173,6 +173,7 @@ int lxc_create_console(struct lxc_conf *conf)
 	struct lxc_console *console = &conf->console;
 	int fd;
 
+  // /usr/local/lib/lxc/debian01/rootfs
 	if (!conf->rootfs.path)
 		return 0;
 
@@ -309,6 +310,7 @@ int lxc_console_mainloop_add(struct lxc_epoll_descr *descr,
 		return 0;
 	}
 
+  // /dev/ptmx
 	if (lxc_mainloop_add_handler(descr, console->master,
 				     console_handler, console)) {
 		ERROR("failed to add to mainloop console handler for '%d'",
@@ -316,6 +318,7 @@ int lxc_console_mainloop_add(struct lxc_epoll_descr *descr,
 		return -1;
 	}
 
+  // /dev/tty
 	if (console->peer != -1 &&
 	    lxc_mainloop_add_handler(descr, console->peer,
 				     console_handler, console))

@@ -268,7 +268,7 @@ struct lxc_utmp {
 
 	}
 
-  // /proc/${child_pid}/root/var/run
+  // /proc/${child_pid}/rootfs/var/run
 	wd = inotify_add_watch(fd, path, IN_MODIFY | IN_CREATE);
 	if (wd < 0) {
 		SYSERROR("failed to add watch for '%s'", path);

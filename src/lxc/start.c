@@ -386,6 +386,8 @@ struct lxc_handler *lxc_init(const char *name, struct lxc_conf *conf)
   //struct lxc_console {
   //  int slave; int master; int peer; char *path; char name[MAXPATHLEN]; struct termios *tios;
   //};
+  // // openpty(&console->master, &console->slave, console->name, NULL, NULL)
+  // fd = lxc_unpriv(open("/dev/tty", O_CLOEXEC | O_RDWR | O_CREAT | O_APPEND, 0600));
 	if (lxc_create_console(conf)) {
 		ERROR("failed to create console");
 		goto out_delete_tty;
