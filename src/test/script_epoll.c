@@ -141,16 +141,15 @@ int main(void) {
     }
     printf("logFd: %d\n", logFd);
 
-    ttySetRaw(STDIN_FILENO, &prevTermios); atexit(ttyReset);
+    int ttyFd = open("/dev/tty", O_RDWR);
+    ttySetRaw(ttyFd, &prevTermios); atexit(ttyReset);
     {
-      //int ttyFd = open("/dev/tty", O_RDWR);
-      //printf("ttyFd: %d\n", ttyFd);
       struct epoll_event ev;
       ev.events = EPOLLIN;
       ev.data.ptr = &(struct epoll_handler) {
-        .fd = STDIN_FILENO, .callback = echo_handler, .data = &(int[]) {masterFd, -1}
+        .fd = ttyFd, .callback = echo_handler, .data = &(int[]) {masterFd, -1}
       };
-      if (epoll_ctl(epfd, EPOLL_CTL_ADD, STDIN_FILENO, &ev) == -1) {
+      if (epoll_ctl(epfd, EPOLL_CTL_ADD, ttyFd, &ev) == -1) {
         errExit("epoll_ctl ttyFd");
       }
     }
@@ -160,7 +159,7 @@ int main(void) {
       struct epoll_event ev;
       ev.events = EPOLLIN;
       ev.data.ptr = &(struct epoll_handler) {
-        .fd = masterFd, .callback = echo_handler, .data = &(int[]) {STDOUT_FILENO, logFd, -1}
+        .fd = masterFd, .callback = echo_handler, .data = &(int[]) {ttyFd, logFd, -1}
       };
       if (epoll_ctl(epfd, EPOLL_CTL_ADD, masterFd, &ev) == -1) {
         errExit("epoll_ctl masterFd");
