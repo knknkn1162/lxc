@@ -141,6 +141,7 @@ int lxc_caps_init(void)
 	if (uid && !euid) {
 		INFO("command is run as setuid root (uid : %d)", uid);
 
+    // Set the state of the calling thread's "keep capabilities" flag.
 		if (prctl(PR_SET_KEEPCAPS, 1)) {
 			ERROR("failed to 'PR_SET_KEEPCAPS': %m");
 			return -1;

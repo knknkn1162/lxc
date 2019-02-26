@@ -115,6 +115,10 @@ static int utmp_handler(int fd, void *data, struct lxc_epoll_descr *descr)
 
 	ret = 0;
 
+  // upgrade packages
+  // got inotify event 256 for unattended-upgrades.pid
+  // got inotify event 2 for unattended-upgrades.pid
+  // got inotify event 256 for unattended-upgrades.lock
 	DEBUG("got inotify event %d for %s", ie->mask, ie->name);
 
 	length = (4 < ie->len) ? 4 : ie->len;

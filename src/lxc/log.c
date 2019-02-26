@@ -118,6 +118,7 @@ struct lxc_log_category lxc_log_category_lxc = {
 /*---------------------------------------------------------------------------*/
 extern void lxc_log_setprefix(const char *prefix)
 {
+  // static char log_prefix[LXC_LOG_PREFIX_SIZE] = "lxc";
 	strncpy(log_prefix, prefix, sizeof(log_prefix));
 	log_prefix[sizeof(log_prefix) - 1] = 0;
 }
@@ -148,6 +149,7 @@ static int log_open(const char *name)
 }
 
 /*---------------------------------------------------------------------------*/
+// if (lxc_log_init(my_args.log_file, my_args.log_priority, my_args.progname, my_args.quiet))
 extern int lxc_log_init(const char *file, const char *priority,
 			const char *prefix, int quiet)
 {

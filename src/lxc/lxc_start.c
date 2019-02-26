@@ -105,6 +105,7 @@ int main(int argc, char *argv[])
 
 	lxc_list_init(&defines);
 
+  // lxc_caps_up()
 	if (lxc_caps_init())
 		return err;
 
@@ -117,8 +118,8 @@ int main(int argc, char *argv[])
 	else
 		args = my_args.argv;
 
-	if (lxc_log_init(my_args.log_file, my_args.log_priority,
-			 my_args.progname, my_args.quiet))
+  // case 'o': args->log_file = optarg; break;
+	if (lxc_log_init(my_args.log_file, my_args.log_priority, my_args.progname, my_args.quiet))
 		return err;
 
 	if (putenv("container=lxc")) {
@@ -186,6 +187,7 @@ struct lxc_conf {
 		return err;
 	}
 
+  // with -c
 	if (my_args.console) {
 
 		char *console, fd;
@@ -222,6 +224,9 @@ struct lxc_conf {
 		free(console);
 	}
 
+  // daemon(int nochdir, int noclose);
+  // nochdir: daemon() changes the process's current working directory to the root directory ("/")
+  // noclose: redirects standard input, standard output and standard error to /dev/null;
 	if (my_args.daemonize && daemon(0, 0)) {
 		SYSERROR("failed to daemonize '%s'", my_args.name);
 		return err;
@@ -234,6 +239,8 @@ struct lxc_conf {
 	 * exec ourself, that requires to have all opened fd
 	 * with the close-on-exec flag set
 	 */
+  // see utmp_shutdown_handler and utmp_handler.
+  // The utmp_handler function is defined in `lxc_utmp_mainloop_add`, which is derived from lxc_poll.
 	if (conf->reboot) {
 		INFO("rebooting container");
 		execvp(argv[0], argv);

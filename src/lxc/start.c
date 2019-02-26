@@ -143,6 +143,16 @@ int lxc_check_inherited(int fd_to_ignore)
 	DIR *dir;
 	int ret = 0;
 
+/*
+  $ tty
+  /dev/pts/0
+  $ ls -ls /proc/self/fd
+  total 0
+  0 lrwx------ 1 vagrant vagrant 64 Feb 26 11:36 0 -> /dev/pts/0
+  0 lrwx------ 1 vagrant vagrant 64 Feb 26 11:36 1 -> /dev/pts/0
+  0 lrwx------ 1 vagrant vagrant 64 Feb 26 11:36 2 -> /dev/pts/0
+  0 lr-x------ 1 vagrant vagrant 64 Feb 26 11:36 3 -> /proc/1696/fd # <= which is the process spawned with the command `ls -ls /proc/self/fd`
+ */
 	dir = opendir("/proc/self/fd");
 	if (!dir) {
 		WARN("failed to open directory: %m");
@@ -169,6 +179,7 @@ int lxc_check_inherited(int fd_to_ignore)
 		if (fd == fddir || fd == lxc_log_fd || fd == fd_to_ignore)
 			continue;
 
+    // if STDIN_FILENO or STDOUT_FILENO or STDERR_FILENO
 		if (match_fd(fd))
 			continue;
 		/*
@@ -178,6 +189,8 @@ int lxc_check_inherited(int fd_to_ignore)
 
 		snprintf(procpath, sizeof(procpath), "/proc/self/fd/%d", fd);
 
+    // ssize_t readlink(const char *pathname, char *buf, size_t bufsiz);
+    // read entity
 		if (readlink(procpath, path, sizeof(path)) == -1)
 			ERROR("readlink(%s) failed : %m", procpath);
 		else
@@ -729,15 +742,25 @@ static struct lxc_operations start_ops = {
 	.post_start = post_start
 };
 
+// lxc_start(my_args.name, args, conf);
 int lxc_start(const char *name, char *const argv[], struct lxc_conf *conf)
 {
 	struct start_args start_arg = {
 		.argv = argv,
 	};
 
+  // The inherited fd is avoidable because when we execute `clone`, the file descriptor will be ordinally inherited without FD_CLOEXEC.
 	if (lxc_check_inherited(-1))
 		return -1;
 
   // name: container name
+  // int __lxc_start(const char *name, struct lxc_conf *conf, struct lxc_operations* ops, void *data)
+  /*
+    static struct lxc_operations start_ops = {
+      # start .. execve child_process
+      .start = start,
+      # post_start .. (NOTICE) parent_process
+      .post_start = post_start };
+   */
 	return __lxc_start(name, conf, &start_ops, &start_arg);
 }
