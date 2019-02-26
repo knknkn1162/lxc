@@ -111,13 +111,40 @@ Root password is 'root', please change !
 'debian02' created
 ```
 
-The configuration settings are written in the several files. The detail is [here](https://gist.github.com/knknkn1162/8060d2edaa9e16882259196540ce92df).
+The configuration settings are written inside the container directory. It is [here](https://gist.github.com/knknkn1162/8060d2edaa9e16882259196540ce92df).
 
 
 ## lxc-start
 
+### without deamon
+
 ```bash
-# create bridge in advance on the host(ubuntu 18.04)
+$ sudo lxc-start --name=debian01 --logpriority=TRACE --logfile=log.log --  /bin/bash
+# or simply
+$ sudo lxc-start --name=debian01 -- /bin/bash
+root@ubuntu-bionic:/#
+```
+
+The logfile is [here](https://gist.github.com/knknkn1162/5ae3fa41b70f2d5bcbea9d8d035486fb).
+
+### with daemon
+
+```bash
+$ sudo lxc-start --name=debian01 --logpriority=TRACE --logfile=log.log --  /bin/bash
+```
+
+
+### with network setting
+
++ If you insert network setting like this:
+
+```
+lxc.network.type=veth
+lxc.network.link=br0
+lxc.network.flags=up
+```
+
+```bash
 $ sudo ip link add name br0 type bridge
 $ sudo ip link set dev br0 up
 # This configuration file if present will be used even if there is already a configuration file present in the previously created container (via lxc-create).See the link https://linuxcontainers.org/ru/lxc/manpages/man1/lxc-start.1.html
