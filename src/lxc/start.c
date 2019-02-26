@@ -448,6 +448,7 @@ void lxc_abort(const char *name, struct lxc_handler *handler)
 static int do_start(void *data)
 {
 	struct lxc_handler *handler = data;
+	int slaveFd;
 
 	if (sigprocmask(SIG_SETMASK, &handler->oldmask, NULL)) {
 		SYSERROR("failed to set sigprocmask");
@@ -495,6 +496,35 @@ static int do_start(void *data)
 	}
 
 	close(handler->sigfd);
+
+	if(setsid() == -1) {
+		WARN("failed to setsid");
+		return -1;
+	}
+
+	slaveFd = handler->conf->console.slave;
+	
+	// The file descriptor slaveFd is acquired by openpty BSD function, so acquire controlling tty on BSD.
+	// Without it, execvp failed: `bash: cannot set terminal process group (-1): Inappropriate ioctl for device` and `bash: no job control in this shell`
+	if (ioctl(slaveFd, TIOCSCTTY, 0) == -1) {
+		SYSERROR("ioctl @ slaveFd");
+	}
+
+	if (dup2(slaveFd, STDIN_FILENO) != STDIN_FILENO) {
+		SYSERROR("failed to dup2 stdin_fileno");
+	}
+	if (dup2(slaveFd, STDOUT_FILENO) != STDOUT_FILENO) {
+		SYSERROR("failed to dup2 stdin_fileno");
+	}
+	if (dup2(slaveFd, STDERR_FILENO) != STDERR_FILENO) {
+		SYSERROR("failed to dup2 stdin_fileno");
+	}
+
+	if (slaveFd > STDERR_FILENO) {/* Safety check */
+		INFO("close slaveFd for safety check");
+		close(slaveFd);
+	}
+
 	/* after this call, we are in error because this
 	 * ops should not return as it execs */
 
