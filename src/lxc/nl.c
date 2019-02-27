@@ -213,6 +213,8 @@ extern int netlink_transaction(struct nl_handler *handler,
 	return 0;
 }
 
+// If you use rtnetlink, set `NETLINK_ROUTE` flag.
+// 	err = netlink_open(&nlh, NETLINK_ROUTE);
 extern int netlink_open(struct nl_handler *handler, int protocol)
 {
 	socklen_t socklen;
@@ -221,10 +223,15 @@ extern int netlink_open(struct nl_handler *handler, int protocol)
 
         memset(handler, 0, sizeof(*handler));
 
+        // set AF_NETLINK.
+        // Both SOCK_RAW and SOCK_DGRAM are valid values for socket_type
         handler->fd = socket(AF_NETLINK, SOCK_RAW, protocol);
         if (handler->fd < 0)
                 return -errno;
 
+        // setsockopt is similar to `int fcntl(int fd, int cmd, ... /* arg */ );`
+        // int setsockopt(int sockfd, int level, int optname, const void *optval, socklen_t optlen);
+        // SOL_SOCKET : SOCKET layer
         if (setsockopt(handler->fd, SOL_SOCKET, SO_SNDBUF, 
 		       &sndbuf, sizeof(sndbuf)) < 0)
                 return -errno;
@@ -233,15 +240,32 @@ extern int netlink_open(struct nl_handler *handler, int protocol)
 		       &rcvbuf,sizeof(rcvbuf)) < 0)
                 return -errno;
 
+        /*
+        struct nl_handler {
+        int fd;
+        int seq; // the sequence number of the netlink messages. This is identified by `time`
+        struct sockaddr_nl local;
+        struct sockaddr_nl peer; }; */
+        /*
+      struct sockaddr_nl {
+          sa_family_t     nl_family;  // AF_NETLINK
+          unsigned short  nl_pad;     // always 0
+          pid_t           nl_pid;     // port ID(if kernel, always set zero)
+          __u32           nl_groups;  // multi cast group mask(if unicast, set 0)
+      };
+         */
+        // usually sockaddr_un(unix domain socket)
+        // The sockaddr_nl structure describes a netlink client in user space or in the kernel
         memset(&handler->local, 0, sizeof(handler->local));
         handler->local.nl_family = AF_NETLINK;
         handler->local.nl_groups = 0;
 
-        if (bind(handler->fd, (struct sockaddr*)&handler->local, 
-		 sizeof(handler->local)) < 0)
-                return -errno;
-
+        // int bind(int sockfd, const struct sockaddr *addr, socklen_t addrlen);
+        // bind socket file descriptor to the address(sockaddr_nl)
+        if (bind(handler->fd, (struct sockaddr*)&handler->local, sizeof(handler->local)) < 0)
+          return -errno;
         socklen = sizeof(handler->local);
+        // int getsockname(int sockfd, struct sockaddr *addr, socklen_t *addrlen);
         if (getsockname(handler->fd, (struct sockaddr*)&handler->local, 
 			&socklen) < 0)
                 return -errno;

@@ -338,6 +338,17 @@ int lxc_veth_create(const char *name1, const char *name2)
 	struct rtattr *nest1, *nest2, *nest3;
 	int len, err;
 
+  /*
+  struct nl_handler {
+    int fd;
+    int seq;
+    struct sockaddr_nl local;
+    struct sockaddr_nl peer;
+  };
+   */
+  // extern int netlink_open(struct nl_handler *handler, int protocol)
+  // use socket, bind, getsockname
+  // nlh->fd .. socket
 	err = netlink_open(&nlh, NETLINK_ROUTE);
 	if (err)
 		return err;
@@ -355,6 +366,7 @@ int lxc_veth_create(const char *name1, const char *name2)
 	err = -ENOMEM;
   // #define NLMSG_GOOD_SIZE (2*PAGE_SIZE)
   /*
+   * see http://man7.org/linux/man-pages/man7/rtnetlink.7.html
 link_req
   nlmsg
     nlmsghdr
@@ -380,18 +392,26 @@ link_req
 		goto out;
 
 	link_req = (struct link_req *)nlmsg;
+  // 
 	link_req->ifinfomsg.ifi_family = AF_UNSPEC;
 	nlmsg->nlmsghdr.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifinfomsg));
+  // NLM_F_REQUEST: Must be set on all request messages.
+  // additional flag bits
+  // NLM_F_CREATE: Create object if it doesn't already exist.
+  // NLM_F_EXCL: Don't replace if the object already exists.
+  // NLM_F_ACK: Request for an acknowledgment on success.
 	nlmsg->nlmsghdr.nlmsg_flags =
 		NLM_F_REQUEST|NLM_F_CREATE|NLM_F_EXCL|NLM_F_ACK;
+  // create network link
 	nlmsg->nlmsghdr.nlmsg_type = RTM_NEWLINK;
 
 	err = -EINVAL;
   /*
-    IFLA_LINKINFO:
-      - IFLA_INFO_KIND: veth
-      IFLA_INFO_DATA:
-        VETH_INFO_PEER:
+   * the structure of nlmsg
+    IFLA_LINKINFO(18):
+      - IFLA_INFO_KIND(1): veth
+      IFLA_INFO_DATA(2):
+        VETH_INFO_PEER(1):
           IFLA_IFNAME: ${name2}
     IFLA_IFNAME: ${name1}
    */
@@ -424,6 +444,7 @@ link_req
 	if (nla_put_string(nlmsg, IFLA_IFNAME, name1))
 		goto out;
 
+  // extern int netlink_transaction(struct nl_handler *handler, struct nlmsg *request, struct nlmsg *answer)
 	err = netlink_transaction(&nlh, nlmsg, answer);
 out:
 	netlink_close(&nlh);
