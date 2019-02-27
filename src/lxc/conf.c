@@ -1408,6 +1408,11 @@ struct lxc_conf *lxc_conf_init(void)
 	return new;
 }
 
+// when constructed network, three elements are required, `type`, `link` and `flags`
+//struct lxc_netdev {
+// int type; int flags; int ifindex; char *link; char *name;
+// char *hwaddr; char *mtu; union netdev_p priv;
+// struct lxc_list ipv4; struct lxc_list ipv6; char *upscript; };
 static int instanciate_veth(struct lxc_handler *handler, struct lxc_netdev *netdev)
 {
 	char veth1buf[IFNAMSIZ], *veth1;
@@ -1429,6 +1434,7 @@ static int instanciate_veth(struct lxc_handler *handler, struct lxc_netdev *netd
 		return -1;
 	}
 
+  // vethJU91P1/vethHyZ1oQ
 	err = lxc_veth_create(veth1, veth2);
 	if (err) {
 		ERROR("failed to create %s-%s : %s", veth1, veth2,
@@ -1436,6 +1442,29 @@ static int instanciate_veth(struct lxc_handler *handler, struct lxc_netdev *netd
 		return -1;
 	}
 
+  /*
+  struct lxc_netdev {
+    int type; int flags; char *link; char *name; char *hwaddr;
+    char *mtu; union netdev_p priv; struct lxc_list ipv4; struct lxc_list ipv6; char *upscript;
+    // lated defined:
+    int ifindex;
+  };
+   */
+/*
+  lxc/src/lxc/confile.c:90:32   { "lxc.network.type",         config_network_type         },
+  lxc/src/lxc/confile.c:91:32   { "lxc.network.flags",        config_network_flags        },
+  lxc/src/lxc/confile.c:92:32   { "lxc.network.link",         config_network_link         },
+  lxc/src/lxc/confile.c:93:32   { "lxc.network.name",         config_network_name         },
+  lxc/src/lxc/confile.c:94:32   { "lxc.network.macvlan.mode", config_network_macvlan_mode },
+  lxc/src/lxc/confile.c:95:32   { "lxc.network.veth.pair",    config_network_veth_pair    },
+  lxc/src/lxc/confile.c:96:32   { "lxc.network.script.up",    config_network_script       },
+  lxc/src/lxc/confile.c:97:32   { "lxc.network.hwaddr",       config_network_hwaddr       },
+  lxc/src/lxc/confile.c:98:32   { "lxc.network.mtu",          config_network_mtu          },
+  lxc/src/lxc/confile.c:99:32   { "lxc.network.vlan.id",      config_network_vlan_id      },
+  lxc/src/lxc/confile.c:100:32    { "lxc.network.ipv4",         config_network_ipv4         },
+  lxc/src/lxc/confile.c:101:32    { "lxc.network.ipv6",         config_network_ipv6         },
+ */
+  // if defined lxc.network.mtu
 	if (netdev->mtu) {
 		err = lxc_netdev_set_mtu(veth1, atoi(netdev->mtu));
 		if (!err)
@@ -1447,6 +1476,7 @@ static int instanciate_veth(struct lxc_handler *handler, struct lxc_netdev *netd
 		}
 	}
 
+  // if defined lxc.network.link
 	if (netdev->link) {
 		err = lxc_bridge_attach(netdev->link, veth1);
 		if (err) {
@@ -1468,13 +1498,16 @@ static int instanciate_veth(struct lxc_handler *handler, struct lxc_netdev *netd
 		goto out_delete;
 	}
 
+  // If defined lxc.network.script.up
 	if (netdev->upscript) {
+    // static int run_script(const char *name, const char *section, const char *script, ...)
 		err = run_script(handler->name, "net", netdev->upscript, "up",
 				 "veth", veth1, (char*) NULL);
 		if (err)
 			goto out_delete;
 	}
 
+  // instanciated veth 'vethJU91P1/vethHyZ1oQ', index is '4'
 	DEBUG("instanciated veth '%s/%s', index is '%d'",
 	      veth1, veth2, netdev->ifindex);
 
@@ -1603,6 +1636,7 @@ static int instanciate_empty(struct lxc_handler *handler, struct lxc_netdev *net
 
 int lxc_create_network(struct lxc_handler *handler)
 {
+  // defined in lxc_config_read. Within this function, config_network_(type|flag|ipv4..) are defined.
 	struct lxc_list *network = &handler->conf->network;
 	struct lxc_list *iterator;
 
@@ -1624,6 +1658,11 @@ int lxc_create_network(struct lxc_handler *handler)
 
     // static int instanciate_cb(struct lxc_handler *, struct lxc_netdev *);
     // instanciate_veth, instanciate_macvlan, instanciate_vlan, instanciate_phys, instanciate_empty,
+    /*
+        lxc.network.type=veth
+        lxc.network.link=br0
+        lxc.network.flags=up
+     */
 		if (netdev_conf[netdev->type](handler, netdev)) {
 			ERROR("failed to create netdev");
 			return -1;
@@ -1675,6 +1714,7 @@ int lxc_assign_network(struct lxc_list *network, pid_t pid)
 			return -1;
 		}
 
+    // move '(null)' to '1807'
 		DEBUG("move '%s' to '%d'", netdev->name, pid);
 	}
 

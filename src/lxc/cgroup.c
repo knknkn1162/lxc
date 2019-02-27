@@ -103,6 +103,7 @@ static int get_cgroup_mount(const char *mtab, char *mnt)
         return err;
 }
 
+// mtab .. /proc/mounts
 static int get_cgroup_flags(const char *mtab, int *flags)
 {
         struct mntent *mntent;
@@ -239,13 +240,13 @@ int lxc_cgroup_create(const char *name, pid_t pid)
   // cgroup /sys/fs/cgroup/hugetlb cgroup rw,nosuid,nodev,noexec,relatime,hugetlb 0 0
   // cgroup /sys/fs/cgroup/pids cgroup rw,nosuid,nodev,noexec,relatime,pids 0 0
   // cgroup /sys/fs/cgroup/devices cgroup rw,nosuid,nodev,noexec,relatime,devices 0 0
-  // cgmnt .. /sys/fs/cgroup/systemd
+  // cgmnt .. /sys/fs/cgroup/devices
 	if (get_cgroup_mount(MTAB, cgmnt)) {
 		ERROR("cgroup is not mounted");
 		return -1;
 	}
 
-  // cgname : /sys/fs/cgroup/systemd/${container_name}
+  // cgname : /sys/fs/cgroup/device/${container_name}
 	snprintf(cgname, MAXPATHLEN, "%s/%s", cgmnt, name);
 
 	/*
@@ -258,7 +259,6 @@ int lxc_cgroup_create(const char *name, pid_t pid)
 	}
 
   //   // cgroup flags is 0x2
-  // rw,nosuid,nodev,noexec,relatime,xattr,name=systemd
 	if (get_cgroup_flags(MTAB, &flags)) {
 		SYSERROR("failed to get cgroup flags");
 		return -1;
@@ -284,6 +284,7 @@ int lxc_cgroup_create(const char *name, pid_t pid)
 
 	/* we enable the clone_children flag of the cgroup */
   // /sys/fs/cgroup/systemd/cgroup.clone_children
+  // This flag only affects the cpuset controller. If the clone_children flag is enabled (1) in a cgroup, a new cpuset cgroup will copy its configuration from the parent during initialization.
 	if (cgroup_enable_clone_children(clonechild)) {
 		SYSERROR("failed to enable 'clone_children flag");
 		return -1;

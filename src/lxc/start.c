@@ -391,6 +391,8 @@ struct lxc_handler *lxc_init(const char *name, struct lxc_conf *conf)
   // struct lxc_tty_info {
   //   int nbtty; struct lxc_pty_info *pty_info;
   // };
+  //
+  // tty_info.pty_info[i].master, tty_info.pty_info[i].slave
 	if (lxc_create_tty(name, conf)) {
 		ERROR("failed to create the ttys");
 		goto out_aborting;
@@ -401,6 +403,8 @@ struct lxc_handler *lxc_init(const char *name, struct lxc_conf *conf)
   //};
   // // openpty(&console->master, &console->slave, console->name, NULL, NULL)
   // fd = lxc_unpriv(open("/dev/tty", O_CLOEXEC | O_RDWR | O_CREAT | O_APPEND, 0600));
+  // file descriptor
+  // conf.console.peer, conf.console.master, conf.console.slave
 	if (lxc_create_console(conf)) {
 		ERROR("failed to create console");
 		goto out_delete_tty;
@@ -409,6 +413,8 @@ struct lxc_handler *lxc_init(const char *name, struct lxc_conf *conf)
 	/* the signal fd has to be created before forking otherwise
 	 * if the child process exits before we setup the signal fd,
 	 * the event will be lost and the command will be stuck */
+  // Block everything except serious error signals such as SIGILL, SIGSEGV, SIGBUS
+  // handler->sig_fd
 	handler->sigfd = setup_signal_fd(&handler->oldmask);
 	if (handler->sigfd < 0) {
 		ERROR("failed to set sigchild fd handler");
@@ -606,6 +612,9 @@ int lxc_spawn(struct lxc_handler *handler)
 		failed_before_rename = 1;
 
   // pid: child_pid
+  // define cgmnt with /sys/fs/cgroup/devices/${container_name} and mkdir
+  // mkdir(cgname, 0700)
+  // cgroup /sys/fs/cgroup/devices cgroup rw,nosuid,nodev,noexec,relatime,devices 0 0
 	if (lxc_cgroup_create(name, handler->pid))
 		goto out_delete_net;
 
@@ -667,6 +676,10 @@ int __lxc_start(const char *name, struct lxc_conf *conf,
 	int status;
 
   // lxc_create_tty, lxc_create_console
+  // create file descriptor..
+  // handler->sig_fd
+  // tty_info.pty_info[i].master, tty_info.pty_info[i].slave
+  // conf.console.peer("/dev/tty"), conf.console.master("/dev/pts/ptmx"), conf.console.slave("/dev/pts/*")
 	handler = lxc_init(name, conf);
 	if (!handler) {
 		ERROR("failed to initialize the container");
@@ -677,6 +690,7 @@ int __lxc_start(const char *name, struct lxc_conf *conf,
 
   // lxc_sync_init
   /* lxc_sync_init, lxc_create_network, lxc_clone, lxc_cgroup_create, lxc_assign_network  */
+  // handler->pid
 	err = lxc_spawn(handler);
 	if (err) {
 		ERROR("failed to spawn '%s'", name);

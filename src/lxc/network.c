@@ -343,6 +343,7 @@ int lxc_veth_create(const char *name1, const char *name2)
 		return err;
 
 	err = -EINVAL;
+  // nla_put_string(nlmsg, IFLA_IFNAME, name1)
 	len = strlen(name1);
 	if (len == 1 || len > IFNAMSIZ)
 		goto out;
@@ -352,10 +353,28 @@ int lxc_veth_create(const char *name1, const char *name2)
 		goto out;
 
 	err = -ENOMEM;
+  // #define NLMSG_GOOD_SIZE (2*PAGE_SIZE)
+  /*
+link_req
+  nlmsg
+    nlmsghdr
+      __u32 nlmsg_len; //  Length of message including header
+      __u16 nlmsg_type; // Type of message content
+      __u16 nlmsg_flags; //  Additional flags
+      __u32 nlmsg_seq; // Sequence number
+      __u32 nlmsg_pid; // Sender port ID
+    ifinfomsg: < information of network interface >
+      unsigned char  ifi_family; // o: AF_UNSPEC
+      unsigned short ifi_type; // Device type
+      int            ifi_index; // Interface index
+      unsigned int   ifi_flags; // Device flags
+      unsigned int   ifi_change; // change mask(always set 0xFFFFFFFF)
+  */
 	nlmsg = nlmsg_alloc(NLMSG_GOOD_SIZE);
 	if (!nlmsg)
 		goto out;
 
+  // use netlink_transaction
 	answer = nlmsg_alloc(NLMSG_GOOD_SIZE);
 	if (!answer)
 		goto out;
@@ -368,6 +387,14 @@ int lxc_veth_create(const char *name1, const char *name2)
 	nlmsg->nlmsghdr.nlmsg_type = RTM_NEWLINK;
 
 	err = -EINVAL;
+  /*
+    IFLA_LINKINFO:
+      - IFLA_INFO_KIND: veth
+      IFLA_INFO_DATA:
+        VETH_INFO_PEER:
+          IFLA_IFNAME: ${name2}
+    IFLA_IFNAME: ${name1}
+   */
 	nest1 = nla_begin_nested(nlmsg, IFLA_LINKINFO);
 	if (!nest1)
 		goto out;
