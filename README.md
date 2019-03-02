@@ -181,11 +181,29 @@ lxc.network.flags=up
 
 ```bash
 $ sudo lxc-create -n debian01 -t debian -f  lxc_macvlan.conf
-$ sudo lxc-start -n debian01 --logpriority=TRACE --logfile=log3.log -- /bin/bash
+$ sudo lxc-start -n debian01 -d --logpriority=TRACE --logfile=log3.log -- /bin/bash
 ```
 
 The logfile is [here](https://gist.github.com/knknkn1162/0f14f72a3b25e1472253ef3697795aa8).
 
+## lxc-attach
+
+```bash
+$ sudo lxc-create -n debian01 -t debian
+# default command is /sbin/init. You may append `-- /bin/bash` to set command explicitly.
+$ sudo lxc-start -n debian01 -d --logpriority=TRACE --logfile=log3.log
+$ sudo lxc-attach -n debian01
+# If you halt container
+$ sudo lxc-stop -n debian01
+```
+
+## lxc-destroy
+
+```bash
+# equivalent to `sudo rm -rf /usr/local/lib/lxc/debian01`.
+$ sudo lxc-destroy -n debian01
+
+```
 
 
 ### From the host
