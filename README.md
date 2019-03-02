@@ -134,7 +134,7 @@ $ sudo lxc-start --name=debian01 --logpriority=TRACE --logfile=log.log --  /bin/
 ```
 
 
-### with network setting
+### with network setting(veth)
 
 + If you insert network setting like this:
 
@@ -169,6 +169,24 @@ $ cat ~/shared/log.log
       lxc-start 1550918557.495 INFO     lxc_console - no rootfs, no console.
 root@ubuntu-bionic:~/shared#
 ```
+
+### with network setting(macvlan)
+
+```
+# macvlan.conf
+lxc.network.type=macvlan
+lxc.network.link=eth0
+lxc.network.flags=up
+```
+
+```bash
+$ sudo lxc-create -n debian02 -t debian -f  lxc_macvlan.conf
+$ sudo ip link add name eth0 type bridge
+$ ip link add link eth0 name vmac0 type macvlan
+$ ip link set dev vmac0 up
+```
+
+
 
 ### From the host
 
