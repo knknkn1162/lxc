@@ -175,16 +175,16 @@ root@ubuntu-bionic:~/shared#
 ```
 # macvlan.conf
 lxc.network.type=macvlan
-lxc.network.link=eth0
+lxc.network.link=enp0s3 # check `ip link show`
 lxc.network.flags=up
 ```
 
 ```bash
-$ sudo lxc-create -n debian02 -t debian -f  lxc_macvlan.conf
-$ sudo ip link add name eth0 type bridge
-$ ip link add link eth0 name vmac0 type macvlan
-$ ip link set dev vmac0 up
+$ sudo lxc-create -n debian01 -t debian -f  lxc_macvlan.conf
+$ sudo lxc-start -n debian01 --logpriority=TRACE --logfile=log3.log -- /bin/bash
 ```
+
+The logfile is [here](https://gist.github.com/knknkn1162/0f14f72a3b25e1472253ef3697795aa8).
 
 
 
