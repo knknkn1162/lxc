@@ -30,11 +30,10 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
+#include <sched.h> // for setns
 
 #include "namespace.h"
 #include "log.h"
-
-#include "setns.h"
 
 lxc_log_define(lxc_namespace, lxc);
 
@@ -42,16 +41,6 @@ struct clone_arg {
 	int (*fn)(void *);
 	void *arg;
 };
-
-int setns(int nstype, int fd)
-{
-#ifndef __NR_setns
-	errno = ENOSYS;
-	return -1;
-#else
-	return syscall(__NR_setns, nstype, fd);
-#endif
-}
 
 static int do_clone(void *arg)
 {
@@ -108,7 +97,8 @@ int lxc_attach(pid_t pid)
 	}
 
 	for (i = 0; i < size; i++) {
-		if (setns(0, fd[i])) {
+    // int setns(int fd, int nstype);
+		if (setns(fd[i], 0)) {
 			SYSERROR("failed to set namespace '%s'", ns[i]);
 			return -1;
 		}
