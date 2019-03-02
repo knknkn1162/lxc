@@ -89,6 +89,7 @@ struct ip_req {
 	struct ifaddrmsg ifa;
 };
 
+// 		err = lxc_netdev_move_by_index(netdev->ifindex, pid);
 int lxc_netdev_move_by_index(int ifindex, pid_t pid)
 {
 	struct nl_handler nlh;
@@ -112,6 +113,7 @@ int lxc_netdev_move_by_index(int ifindex, pid_t pid)
 	nlmsg->nlmsghdr.nlmsg_flags = NLM_F_REQUEST|NLM_F_ACK;
 	nlmsg->nlmsghdr.nlmsg_type = RTM_NEWLINK;
 
+  // #  define IFLA_NET_NS_PID 19
 	if (nla_put_u32(nlmsg, IFLA_NET_NS_PID, pid))
 		goto out;
 
@@ -225,6 +227,7 @@ int lxc_netdev_rename_by_name(const char *oldname, const char *newname)
 	return lxc_netdev_rename_by_index(index, newname);
 }
 
+// netdev_set_flag(name, IFF_UP);
 static int netdev_set_flag(const char *name, int flag)
 {
 	struct nl_handler nlh;
@@ -256,14 +259,17 @@ static int netdev_set_flag(const char *name, int flag)
 		goto out;
 
 	link_req = (struct link_req *)nlmsg;
-	link_req->ifinfomsg.ifi_family = AF_UNSPEC;
-	link_req->ifinfomsg.ifi_index = index;
-	link_req->ifinfomsg.ifi_change |= IFF_UP;
-	link_req->ifinfomsg.ifi_flags |= flag;
+	link_req->ifinfomsg.ifi_family = AF_UNSPEC; // always in rtnetlink
+	link_req->ifinfomsg.ifi_index = index; //if_nametoindex
+	link_req->ifinfomsg.ifi_change |= IFF_UP; // should be set 0xFFFFFFFF
+	link_req->ifinfomsg.ifi_flags |= flag; // IFF_UP
 	nlmsg->nlmsghdr.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifinfomsg));
 	nlmsg->nlmsghdr.nlmsg_flags = NLM_F_REQUEST|NLM_F_ACK;
+  // create network interface
 	nlmsg->nlmsghdr.nlmsg_type = RTM_NEWLINK;
 
+  // netlink_send(handler, request);
+  // netlink_rcv(handler, answer);
 	err = netlink_transaction(&nlh, nlmsg, answer);
 out:
 	netlink_close(&nlh);
@@ -382,6 +388,7 @@ link_req
       unsigned int   ifi_flags; // Device flags
       unsigned int   ifi_change; // change mask(always set 0xFFFFFFFF)
   */
+  // #define NLMSG_GOOD_SIZE (2*PAGE_SIZE) => 8 KB
 	nlmsg = nlmsg_alloc(NLMSG_GOOD_SIZE);
 	if (!nlmsg)
 		goto out;
@@ -415,13 +422,18 @@ link_req
           IFLA_IFNAME: ${name2}
     IFLA_IFNAME: ${name1}
    */
+  // struct rtattr *nla_begin_nested(struct nlmsg *nlmsg, int attr)
+  // rtattr is optional attributes after the initial header:
 	nest1 = nla_begin_nested(nlmsg, IFLA_LINKINFO);
 	if (!nest1)
 		goto out;
 
+  // rta->rta_type = INFA_INFO_KIND;
+  // memcpy(RTA_DATA(rta), "veth", len);
 	if (nla_put_string(nlmsg, IFLA_INFO_KIND, "veth"))
 		goto out;
 
+  // #  define IFLA_INFO_DATA 2
 	nest2 = nla_begin_nested(nlmsg, IFLA_INFO_DATA);
 	if (!nest2)
 		goto out;
@@ -432,6 +444,9 @@ link_req
 
 	nlmsg->nlmsghdr.nlmsg_len += sizeof(struct ifinfomsg);
 
+  // extern int nla_put_string(struct nlmsg *nlmsg, int attr, const char *string)
+  // rta->rta_type = IFLA_IFNAME // Device name.
+  // memcpy(RTA_DATA(rta), name2, len);
 	if (nla_put_string(nlmsg, IFLA_IFNAME, name2))
 		goto out;
 
@@ -530,6 +545,7 @@ err3:
 	return err;
 }
 
+// lxc_macvlan_create(netdev->link, peer, netdev->priv.macvlan_attr.mode);
 int lxc_macvlan_create(const char *master, const char *name, int mode)
 {
 	struct nl_handler nlh;
@@ -806,12 +822,14 @@ int lxc_bridge_attach(const char *bridge, const char *ifname)
 	if (!index)
 		return -EINVAL;
 
+  // ipv4 internet protocol
 	fd = socket(AF_INET, SOCK_STREAM, 0);
 	if (fd < 0)
 		return -errno;
 
 	strncpy(ifr.ifr_name, bridge, IFNAMSIZ);
 	ifr.ifr_ifindex = index;
+  // add the interface to bridge.
 	err = ioctl(fd, SIOCBRADDIF, &ifr);
 	close(fd);
 	if (err)

@@ -623,6 +623,7 @@ int lxc_spawn(struct lxc_handler *handler)
 
 	/* Create the network configuration */
 	if (clone_flags & CLONE_NEWNET) {
+    // int lxc_assign_network(struct lxc_list *network, pid_t pid)
 		if (lxc_assign_network(&handler->conf->network, handler->pid)) {
 			ERROR("failed to create the configured network");
 			goto out_delete_net;
@@ -636,7 +637,7 @@ int lxc_spawn(struct lxc_handler *handler)
 	//if (__sync_wake(handler->sv[1], LXC_SYNC_POST_CONFIGURE))
 	//	return -1;
   //// read
-	//return __sync_wait(fd, LXC_SYNC_RESTART);
+	// return __sync_wait(fd, LXC_SYNC_RESTART);
 	if (lxc_sync_barrier_child(handler, LXC_SYNC_POST_CONFIGURE))
 		return -1;
 

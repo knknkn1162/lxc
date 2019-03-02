@@ -191,6 +191,8 @@ static struct caps_opt caps_opt[] = {
 	{ "mac_admin",         CAP_MAC_ADMIN         },
 };
 
+
+// run_script(handler->name, "net", netdev->upscript, "up", "veth", veth1, (char*) NULL);
 static int run_script(const char *name, const char *section,
 		      const char *script, ...)
 {
@@ -212,12 +214,14 @@ static int run_script(const char *name, const char *section,
 	size += strlen(name);
 	size += strlen(section);
 
+  // The alloca() function allocates size bytes of space in the stack frame of the caller.
 	buffer = alloca(size + 1);
 	if (!buffer) {
 		ERROR("failed to allocate memory");
 		return -1;
 	}
 
+  // (netdev->upscript up veth "vethJU91P1") ${container_name} "net"
 	ret = sprintf(buffer, "%s %s %s", script, name, section);
 
 	va_start(ap, script);
@@ -225,18 +229,21 @@ static int run_script(const char *name, const char *section,
 		ret += sprintf(buffer + ret, " %s", p);
 	va_end(ap);
 
+  // pipe and exec
 	f = popen(buffer, "r");
 	if (!f) {
 		SYSERROR("popen failed");
 		return -1;
 	}
 
+  // #define LXC_LOG_BUFFER_SIZE	512
 	output = malloc(LXC_LOG_BUFFER_SIZE);
 	if (!output) {
 		ERROR("failed to allocate memory for script output");
 		return -1;
 	}
 
+  // char *fgets(char *s, int size, FILE *stream);
 	while(fgets(output, LXC_LOG_BUFFER_SIZE, f))
 		DEBUG("script output: %s", output);
 
@@ -1435,6 +1442,23 @@ static int instanciate_veth(struct lxc_handler *handler, struct lxc_netdev *netd
 	}
 
   // vethJU91P1/vethHyZ1oQ
+  // int lxc_veth_create(const char *name1, const char *name2)
+  /*
+    static int nla_put(struct nlmsg *nlmsg, int attr,
+          const void *data, size_t len) {
+      // rooting attribute
+      struct rtattr *rta;
+      size_t rtalen = RTA_LENGTH(len);
+
+      rta = NLMSG_TAIL(&nlmsg->nlmsghdr);
+      rta->rta_type = attr;
+      rta->rta_len = rtalen;
+      // returns a pointer to the start of this attribute's data.
+      memcpy(RTA_DATA(rta), data, len);
+      // NLMSG_ALIGN: Round the length of a netlink message up to align it properly.
+      nlmsg->nlmsghdr.nlmsg_len = NLMSG_ALIGN(nlmsg->nlmsghdr.nlmsg_len) + RTA_ALIGN(rtalen);
+      return 0; }
+   */
 	err = lxc_veth_create(veth1, veth2);
 	if (err) {
 		ERROR("failed to create %s-%s : %s", veth1, veth2,
@@ -1476,8 +1500,10 @@ static int instanciate_veth(struct lxc_handler *handler, struct lxc_netdev *netd
 		}
 	}
 
-  // if defined lxc.network.link
+  // if defined lxc.network.link=br0(veth) or eth0(macvlan)
 	if (netdev->link) {
+    // if vth, br0 or if macvlan, eth0
+    // err = ioctl(fd, SIOCBRADDIF, &ifr);
 		err = lxc_bridge_attach(netdev->link, veth1);
 		if (err) {
 			ERROR("failed to attach '%s' to the bridge '%s' : %s",
@@ -1492,6 +1518,7 @@ static int instanciate_veth(struct lxc_handler *handler, struct lxc_netdev *netd
 		goto out_delete;
 	}
 
+  // netdev_set_flag(name, IFF_UP);
 	err = lxc_netdev_up(veth1);
 	if (err) {
 		ERROR("failed to set %s up : %s", veth1, strerror(-err));
@@ -1657,12 +1684,21 @@ int lxc_create_network(struct lxc_handler *handler)
 		}
 
     // static int instanciate_cb(struct lxc_handler *, struct lxc_netdev *);
-    // instanciate_veth, instanciate_macvlan, instanciate_vlan, instanciate_phys, instanciate_empty,
+    // instanciate_veth( lxc_veth_create(veth1, veth2); )
+    // instanciate_macvlan( lxc_macvlan_create(netdev->link, peer, netdev->priv.macvlan_attr.mode);  )
+    // // int lxc_macvlan_create(const char *master, const char *name, int mode)
+    // instanciate_vlan /* XXX: merge with instanciate_macvlan */
+    // instanciate_phys
+    // instanciate_empty,
     /*
         lxc.network.type=veth
         lxc.network.link=br0
         lxc.network.flags=up
-     */
+
+        lxc.network.type=macvlan
+        lxc.network.link=eth0
+        lxc.network.flags=up
+    */
 		if (netdev_conf[netdev->type](handler, netdev)) {
 			ERROR("failed to create netdev");
 			return -1;

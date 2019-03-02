@@ -270,6 +270,7 @@ static int config_network_link(const char *key, char *value,
 	if (!netdev)
 		return -1;
 
+  // static int network_ifname(char **valuep, char *value)
 	return network_ifname(&netdev->link, value);
 }
 

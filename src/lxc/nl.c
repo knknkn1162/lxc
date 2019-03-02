@@ -50,15 +50,17 @@ extern void *nlmsg_data(struct nlmsg *nlmsg)
 static int nla_put(struct nlmsg *nlmsg, int attr, 
 		   const void *data, size_t len)
 {
+  // rooting attribute
 	struct rtattr *rta;
 	size_t rtalen = RTA_LENGTH(len);
 	
         rta = NLMSG_TAIL(&nlmsg->nlmsghdr);
         rta->rta_type = attr;
         rta->rta_len = rtalen;
+        // returns a pointer to the start of this attribute's data.
         memcpy(RTA_DATA(rta), data, len);
-        nlmsg->nlmsghdr.nlmsg_len =
-		NLMSG_ALIGN(nlmsg->nlmsghdr.nlmsg_len) + RTA_ALIGN(rtalen);
+        // NLMSG_ALIGN: Round the length of a netlink message up to align it properly.
+        nlmsg->nlmsghdr.nlmsg_len = NLMSG_ALIGN(nlmsg->nlmsghdr.nlmsg_len) + RTA_ALIGN(rtalen);
 	return 0;
 }
 
@@ -85,11 +87,13 @@ extern int nla_put_u16(struct nlmsg *nlmsg, int attr, ushort value)
 
 extern int nla_put_attr(struct nlmsg *nlmsg, int attr)
 {
+  // static int nla_put(struct nlmsg *nlmsg, int attr, const void *data, size_t len)
 	return nla_put(nlmsg, attr, NULL, 0);
 }
 
 struct rtattr *nla_begin_nested(struct nlmsg *nlmsg, int attr)
 {
+  // nmsg after the length of netlink
 	struct rtattr *rtattr = NLMSG_TAIL(&nlmsg->nlmsghdr);
 
 	if (nla_put_attr(nlmsg, attr))
@@ -106,6 +110,8 @@ void nla_end_nested(struct nlmsg *nlmsg, struct rtattr *attr)
 extern struct nlmsg *nlmsg_alloc(size_t size)
 {
 	struct nlmsg *nlmsg;
+  // 8KB
+  // Round the length of a netlink message up to align it properly.
 	size_t len = NLMSG_ALIGN(size) + NLMSG_ALIGN(sizeof(struct nlmsghdr *));
 
 	nlmsg = (struct nlmsg *)malloc(len);
@@ -145,6 +151,7 @@ extern int netlink_rcv(struct nl_handler *handler, struct nlmsg *answer)
         nladdr.nl_groups = 0;
 
 again:
+  // ssize_t recvfrom(int sockfd, void *buf, size_t len, int flags, struct sockaddr *src_addr, socklen_t *addrlen);
 	ret = recvmsg(handler->fd, &msg, 0);
 	if (ret < 0) {
 		if (errno == EINTR)
@@ -162,9 +169,16 @@ again:
 	return ret;
 }
 
+// ret = netlink_send(handler, request);
 extern int netlink_send(struct nl_handler *handler, struct nlmsg *nlmsg)
 {
         struct sockaddr_nl nladdr;
+        /*
+          struct iovec {
+              void  *iov_base;    // Starting address
+              size_t iov_len;     // Number of bytes to transfer
+          };
+         */
         struct iovec iov = {
                 .iov_base = (void*)nlmsg,
                 .iov_len = nlmsg->nlmsghdr.nlmsg_len,
@@ -174,6 +188,7 @@ extern int netlink_send(struct nl_handler *handler, struct nlmsg *nlmsg)
                 .msg_namelen = sizeof(nladdr),
                 .msg_iov = &iov,
                 .msg_iovlen = 1,
+                // no need to auxliriary data
         };
 	int ret;
 	
@@ -182,6 +197,9 @@ extern int netlink_send(struct nl_handler *handler, struct nlmsg *nlmsg)
         nladdr.nl_pid = 0;
         nladdr.nl_groups = 0;
 
+  // ssize_t sendmsg(int sockfd, const struct msghdr *msg, int flags);
+  // ssize_t sendto(int sockfd, const void *buf, size_t len, int flags, const struct sockaddr *dest_addr, socklen_t addrlen);
+  // equivalent to sendto(handler->fd, (void*)nlmsg, nlmsg->nlmsghdr.nlmsg_len, 0, &nladdr, sizeof(struct sockaddr_nl));
 	ret = sendmsg(handler->fd, &msg, 0);
 	if (ret < 0)
 		return -errno;
@@ -193,6 +211,7 @@ extern int netlink_send(struct nl_handler *handler, struct nlmsg *nlmsg)
 #define NLMSG_ERROR                0x2
 #endif
 extern int netlink_transaction(struct nl_handler *handler, 
+            // nlmsg = nlmsghdr
 			       struct nlmsg *request, struct nlmsg *answer)
 {
 	int ret;
@@ -206,6 +225,9 @@ extern int netlink_transaction(struct nl_handler *handler,
 		return ret;
 
 	if (answer->nlmsghdr.nlmsg_type == NLMSG_ERROR) {
+    // nlmsg
+    //  After each nlmsghdr the payload follows.
+    // NLMSG_ERROR message signals an error and the payload contains an nlmsgerr structure
 		struct nlmsgerr *err = (struct nlmsgerr*)NLMSG_DATA(answer);
 		return err->error;
 	}
@@ -217,7 +239,7 @@ extern int netlink_transaction(struct nl_handler *handler,
 // 	err = netlink_open(&nlh, NETLINK_ROUTE);
 extern int netlink_open(struct nl_handler *handler, int protocol)
 {
-	socklen_t socklen;
+        socklen_t socklen;
         int sndbuf = 32768;
         int rcvbuf = 32768;
 
