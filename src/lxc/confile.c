@@ -307,6 +307,13 @@ static int config_network_macvlan_mode(const char *key, char *value,
 	if (!netdev)
 		return -1;
 
+  /*
+  union netdev_p {
+    struct ifla_veth veth_attr;
+    struct ifla_vlan vlan_attr;
+    struct ifla_macvlan macvlan_attr;
+  };
+   */
 	return macvlan_mode(&netdev->priv.macvlan_attr.mode, value);
 }
 

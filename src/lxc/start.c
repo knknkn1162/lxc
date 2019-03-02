@@ -624,6 +624,10 @@ int lxc_spawn(struct lxc_handler *handler)
 	/* Create the network configuration */
 	if (clone_flags & CLONE_NEWNET) {
     // int lxc_assign_network(struct lxc_list *network, pid_t pid)
+    // // err = lxc_netdev_move_by_index(netdev->ifindex, pid);
+    /*
+    * [IFLA_NET_NS_PID] = ${pid}
+    */
 		if (lxc_assign_network(&handler->conf->network, handler->pid)) {
 			ERROR("failed to create the configured network");
 			goto out_delete_net;

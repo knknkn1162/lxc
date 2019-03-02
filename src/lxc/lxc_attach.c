@@ -92,6 +92,7 @@ int main(int argc, char *argv[], char *envp[])
 	}
 
 	if (curdir && chdir(curdir))
+    // curdir is not existed, ENOENT?
 		WARN("could not change directory to '%s'", curdir);
 
 	free(curdir);
@@ -149,6 +150,5 @@ int main(int argc, char *argv[], char *envp[])
 		}
 
 	}
-
 	return 0;
 }

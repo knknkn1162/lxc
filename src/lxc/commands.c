@@ -210,6 +210,7 @@ static int command_handler(int fd, void *data, struct lxc_epoll_descr *descr)
 	}
 
 	if (!ret) {
+    // if lxc-attach
 		DEBUG("peer has disconnected");
 		goto out_close;
 	}

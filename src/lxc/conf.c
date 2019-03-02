@@ -1563,8 +1563,9 @@ static int instanciate_macvlan(struct lxc_handler *handler, struct lxc_netdev *n
 		return -1;
 	}
 
-	err = lxc_macvlan_create(netdev->link, peer,
-				 netdev->priv.macvlan_attr.mode);
+  // lxc.network.macvlan.mode
+  // static int config_network_macvlan_mode(const char *, char *, struct lxc_conf *);
+	err = lxc_macvlan_create(netdev->link, peer, netdev->priv.macvlan_attr.mode);
 	if (err) {
 		ERROR("failed to create macvlan interface '%s' on '%s' : %s",
 		      peer, netdev->link, strerror(-err));
@@ -1592,8 +1593,7 @@ static int instanciate_macvlan(struct lxc_handler *handler, struct lxc_netdev *n
 }
 
 /* XXX: merge with instanciate_macvlan */
-static int instanciate_vlan(struct lxc_handler *handler, struct lxc_netdev *netdev)
-{
+static int instanciate_vlan(struct lxc_handler *handler, struct lxc_netdev *netdev) {
 	char peer[IFNAMSIZ];
 	int err;
 
@@ -1696,7 +1696,7 @@ int lxc_create_network(struct lxc_handler *handler)
         lxc.network.flags=up
 
         lxc.network.type=macvlan
-        lxc.network.link=eth0
+        lxc.network.link=enp0s3 // check `ip link show`
         lxc.network.flags=up
     */
 		if (netdev_conf[netdev->type](handler, netdev)) {

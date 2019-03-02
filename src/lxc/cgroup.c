@@ -349,7 +349,7 @@ int lxc_cgroup_path_get(char **path, const char *name)
 		return -1;
 	}
 
-  // cgroup : /sys/fs/cgroup/systemd/${container_name}
+  // cgroup : /sys/fs/cgroup/devices/${container_name}
 	snprintf(nsgroup_path, MAXPATHLEN, "%s/%s", cgroup, name);
 	return 0;
 }

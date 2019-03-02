@@ -361,8 +361,7 @@ int veth_create(const char *name1, const char *name2)
 *        },
 *      },
  *   },
- *     [IFLA_IFNAME] = ${veth01}
- *   }
+ *   [IFLA_IFNAME] = ${veth01}
    */
   // nla_put .. set rta at the tail of the request and set rta->type=IFLA_LINKINFO & update nlmsg_hdr->nlmsg_len
 	nest1 = nla_begin_nested(request, IFLA_LINKINFO);

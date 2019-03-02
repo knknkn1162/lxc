@@ -45,10 +45,12 @@ static int freeze_unfreeze(const char *name, int freeze)
 	char tmpf[32];
 	int fd, ret;
 	
+  // nsgroup: /sys/fs/cgroup/devices/${container_name}
 	ret = lxc_cgroup_path_get(&nsgroup, name);
 	if (ret)
 		return -1;
 
+  // see https://www.kernel.org/doc/Documentation/cgroup-v1/freezer-subsystem.txt
 	snprintf(freezer, MAXPATHLEN, "%s/freezer.state", nsgroup);
 
 	fd = open(freezer, O_RDWR);

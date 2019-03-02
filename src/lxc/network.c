@@ -110,10 +110,13 @@ int lxc_netdev_move_by_index(int ifindex, pid_t pid)
 	link_req->ifinfomsg.ifi_family = AF_UNSPEC;
 	link_req->ifinfomsg.ifi_index = ifindex;
 	nlmsg->nlmsghdr.nlmsg_len = NLMSG_LENGTH(sizeof(struct ifinfomsg));
+  // lxc_create_network: NLM_F_REQUEST|NLM_F_CREATE|NLM_F_EXCL|NLM_F_ACK
 	nlmsg->nlmsghdr.nlmsg_flags = NLM_F_REQUEST|NLM_F_ACK;
 	nlmsg->nlmsghdr.nlmsg_type = RTM_NEWLINK;
 
-  // #  define IFLA_NET_NS_PID 19
+  /*
+   * [IFLA_NET_NS_PID] = ${pid}
+   */
 	if (nla_put_u32(nlmsg, IFLA_NET_NS_PID, pid))
 		goto out;
 
@@ -588,6 +591,17 @@ int lxc_macvlan_create(const char *master, const char *name, int mode)
 		NLM_F_REQUEST|NLM_F_CREATE|NLM_F_EXCL|NLM_F_ACK;
 	nlmsg->nlmsghdr.nlmsg_type = RTM_NEWLINK;
 
+
+  /*
+   [IFLA_LINKINFO] = {
+     [AF_INFO_KIND] = "macvlan",
+     [IFLA_INFO_DATA] = {
+       [IFLA_MACVLAN_MODE] = ${mode}
+     },
+   },
+   [IFLA_LINK] = ${index},
+   [IFLA_IFNAME] = ${name}
+   */
 	nest = nla_begin_nested(nlmsg, IFLA_LINKINFO);
 	if (!nest)
 		goto out;
@@ -600,9 +614,11 @@ int lxc_macvlan_create(const char *master, const char *name, int mode)
 		if (!nest2)
 			goto out;
 
+    // IFLA_MACVLAN_MODE is declared in linux/include/uapi/linux/if_link.h
 		if (nla_put_u32(nlmsg, IFLA_MACVLAN_MODE, mode))
 			goto out;
 
+    // attr->rta_len
 		nla_end_nested(nlmsg, nest2);
 	}
 

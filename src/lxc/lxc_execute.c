@@ -103,6 +103,7 @@ int main(int argc, char *argv[])
 			 my_args.progname, my_args.quiet))
 		return -1;
 
+  // LXCINITDIR = /usr/local/lib/lxc
 	args = lxc_arguments_dup(LXCINITDIR "/lxc-init", &my_args);
 	if (!args)
 		return -1;
@@ -142,4 +143,3 @@ int main(int argc, char *argv[])
 
 	return lxc_start(my_args.name, args, conf);
 }
-

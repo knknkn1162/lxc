@@ -111,7 +111,7 @@ struct lxc_netdev {
 	char *name;
 	char *hwaddr;
 	char *mtu;
-	union netdev_p priv;
+	union netdev_p priv; // (veth|vlan|macvlan)_attr
 	struct lxc_list ipv4;
 	struct lxc_list ipv6;
 	char *upscript;

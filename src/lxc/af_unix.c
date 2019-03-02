@@ -240,6 +240,7 @@ int lxc_af_unix_rcv_credential(int fd, void *data, size_t size)
             cmsg->cmsg_type == SCM_CREDENTIALS) {
 		memcpy(&cred, CMSG_DATA(cmsg), sizeof(cred));
 		if (cred.uid && (cred.uid != getuid() || cred.gid != getgid())) {
+      // if lxc-info without sudo
 			INFO("message denied for '%d/%d'", cred.uid, cred.gid);
 			return -EACCES;
 		}
