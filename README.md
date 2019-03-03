@@ -9,8 +9,7 @@
 ```bash
 $ ./autogen.sh
 # Without MAJOR_IN_SYSMACROS, the error occurs; `bdev.c:832:13: error: In the GNU C Library, "major" is defined`.
-# LDFLAGS is required because of the error, `lxc-create: symbol lookup error: lxc-create: undefined symbol: lxc_arguments_parse`
- by <sys/sysmacros.h>.
+# LDFLAGS is required because of the error, `lxc-create: symbol lookup error: lxc-create: undefined symbol: lxc_arguments_parse by <sys/sysmacros.h>`.
 $ ./configure CFLAGS=-DMAJOR_IN_SYSMACROS LDFLAGS="-L/usr/local/lib -Wl,-rpath /usr/local/lib" && make
 # if you undo `configure` operation, exec this command:
 $ make maintainer-clean
