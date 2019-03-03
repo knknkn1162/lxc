@@ -75,6 +75,12 @@ static int lxc_utmp_add_timer(struct lxc_epoll_descr *descr,
 static int lxc_utmp_del_timer(struct lxc_epoll_descr *descr,
 			      struct lxc_utmp *utmp_data);
 
+// lxc_mainloop_add_handler(descr, fd, utmp_handler, (void *)utmp_data) where fd = inotify_init();
+// utmp_data->handler = handler;
+// utmp_data->container_state = CONTAINER_STARTING;
+// utmp_data->timer_fd = -1;
+// utmp_data->prev_runlevel = 'N';
+// utmp_data->curr_runlevel = 'N';
 static int utmp_handler(int fd, void *data, struct lxc_epoll_descr *descr)
 {
 	struct inotify_event *ie;
@@ -100,6 +106,15 @@ static int utmp_handler(int fd, void *data, struct lxc_epoll_descr *descr)
 		return -1;
 	}
 
+  /*
+      struct inotify_event {
+          int      wd;    
+          uint32_t mask;  
+          uint32_t cookie;
+          uint32_t len;   
+          char     name[];
+      };
+  */
 	ie = (struct inotify_event *)buffer;
 
 	if (ie->len <= 0) {
@@ -125,16 +140,19 @@ static int utmp_handler(int fd, void *data, struct lxc_epoll_descr *descr)
 
 	/* only care about utmp */
 
+  // if ie->name != "utmp"
 	if (strncmp(ie->name, "utmp", length))
 		return 0;
 
+  // if /proc/8543/root/var/run/utmp is modified or created
 	if (ie->mask & (IN_MODIFY | IN_CREATE))
+    // update utmp_data
 		ret = utmp_get_runlevel(utmp_data);
 
 	if (ret < 0)
 		goto out;
 
-	/* container halting, from running or starting state */
+	/* container **halting**, from running or starting state */
 	if (utmp_data->curr_runlevel == '0'
 	    && ((utmp_data->container_state == CONTAINER_RUNNING)
 		|| (utmp_data->container_state == CONTAINER_STARTING))) {
@@ -145,7 +163,7 @@ static int utmp_handler(int fd, void *data, struct lxc_epoll_descr *descr)
 		goto out;
 	}
 
-	/* container rebooting, from running or starting state */
+	/* container **rebooting**, from running or starting state */
 	if (utmp_data->curr_runlevel == '6'
 	    && ((utmp_data->container_state == CONTAINER_RUNNING)
 		|| (utmp_data->container_state == CONTAINER_STARTING))) {
@@ -191,9 +209,12 @@ static int utmp_get_runlevel(struct lxc_utmp *utmp_data)
 
 	while ((utmpx = getutxent())) {
 
+    // #define RUN_LVL       1 /* Change in system run-level
 		if (utmpx->ut_type == RUN_LVL) {
+      // PID of login process
+      // see https://github.com/systemd/systemd/blob/0c697941389b7379c4471bc0a067ede02814bc57/src/shared/utmp-wtmp.c#L69-L70
 			utmp_data->prev_runlevel = utmpx->ut_pid / 256;
-			utmp_data->curr_runlevel = utmpx->ut_pid % 256;
+			utmp_data->curr_runlevel = utmpx->ut_pid % 256; // '5'
 			DEBUG("utmp handler - run level is %c/%c",
 			      utmp_data->prev_runlevel,
 			      utmp_data->curr_runlevel);
@@ -279,9 +300,23 @@ struct lxc_utmp {
 		goto out_close;
 	}
 
+  /*
+    struct lxc_utmp {
+      struct lxc_handler *handler;
+#define CONTAINER_STARTING  0
+#define CONTAINER_REBOOTING 1
+#define CONTAINER_HALTING   2
+#define CONTAINER_RUNNING   4
+      char container_state;
+      int timer_fd;
+      int prev_runlevel, curr_runlevel;
+    };
+   */
 	utmp_data->handler = handler;
 	utmp_data->container_state = CONTAINER_STARTING;
 	utmp_data->timer_fd = -1;
+  // if prev_runlevel is not existed, display 'N'.
+  // see also runlevel command
 	utmp_data->prev_runlevel = 'N';
 	utmp_data->curr_runlevel = 'N';
 

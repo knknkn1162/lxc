@@ -280,6 +280,14 @@ static int signal_handler(int fd, void *data,
 int lxc_pid_callback(int fd, struct lxc_request *request,
 		     struct lxc_handler *handler)
 {
+  /*
+
+  struct lxc_answer {
+    int fd;
+    int ret;
+    pid_t pid;
+  };
+   */
 	struct lxc_answer answer;
 	int ret;
 
@@ -345,6 +353,7 @@ int lxc_poll(const char *name, struct lxc_handler *handler)
 
   // fd = inotify_init(); conf->rootfs.path
   // utmp_handler
+  // check runlevel
 	if (lxc_utmp_mainloop_add(&descr, handler)) {
 		ERROR("failed to add utmp handler to mainloop");
 		goto out_mainloop_open;

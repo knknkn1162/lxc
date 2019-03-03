@@ -176,37 +176,53 @@ out:
         return ret;
 }
 
+// use CMSG(Complimentary MSG) and set cmsg_type = SCM_CREDENTIALS
 int lxc_af_unix_send_credential(int fd, void *data, size_t size)
 {
-        struct msghdr msg = { 0 };
-        struct iovec iov;
-        struct cmsghdr *cmsg;
-	struct ucred cred = {
-		.pid = getpid(),
-		.uid = getuid(),
-		.gid = getgid(),
-	};
-        char cmsgbuf[CMSG_SPACE(sizeof(cred))];
-        char buf[1];
+  struct msghdr msg = { 0 };
+  struct iovec iov;
+  struct cmsghdr *cmsg;
+  /*
+  struct ucred {
+      pid_t pid;    // process ID of the sending process //
+      uid_t uid;    // user ID of the sending process //
+      gid_t gid;    // group ID of the sending process //
+  };
+  */
+  struct ucred cred = {
+    .pid = getpid(),
+    .uid = getuid(),
+    .gid = getgid(),
+  };
+  char cmsgbuf[CMSG_SPACE(sizeof(cred))];
+  char buf[1];
 
-        msg.msg_control = cmsgbuf;
-        msg.msg_controllen = sizeof(cmsgbuf);
+  msg.msg_control = cmsgbuf;
+  msg.msg_controllen = sizeof(cmsgbuf);
 
-        cmsg = CMSG_FIRSTHDR(&msg);
-        cmsg->cmsg_len = CMSG_LEN(sizeof(struct ucred));
-        cmsg->cmsg_level = SOL_SOCKET;
-        cmsg->cmsg_type = SCM_CREDENTIALS;
-	memcpy(CMSG_DATA(cmsg), &cred, sizeof(cred));
+  cmsg = CMSG_FIRSTHDR(&msg);
+  /*
+  struct cmsghdr {
+      socklen_t cmsg_len;    // data byte count, including header
+      int       cmsg_level;  // originating protocol
+      int       cmsg_type;   // protocol-specific type
+  };
+  */
+  cmsg->cmsg_len = CMSG_LEN(sizeof(struct ucred));
+  cmsg->cmsg_level = SOL_SOCKET;
+  // Send or receive UNIX credentials.  This can be used for authentication.
+  cmsg->cmsg_type = SCM_CREDENTIALS;
+  memcpy(CMSG_DATA(cmsg), &cred, sizeof(cred));
 
-        msg.msg_name = NULL;
-        msg.msg_namelen = 0;
+  msg.msg_name = NULL;
+  msg.msg_namelen = 0;
 
-        iov.iov_base = data ? data : buf;
-        iov.iov_len = data ? size : sizeof(buf);
-        msg.msg_iov = &iov;
-        msg.msg_iovlen = 1;
+  iov.iov_base = data ? data : buf;
+  iov.iov_len = data ? size : sizeof(buf);
+  msg.msg_iov = &iov;
+  msg.msg_iovlen = 1;
 
-        return sendmsg(fd, &msg, 0);
+  return sendmsg(fd, &msg, 0);
 }
 
 int lxc_af_unix_rcv_credential(int fd, void *data, size_t size)

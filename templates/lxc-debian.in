@@ -47,6 +47,7 @@ configure_debian()
 
     # configure the inittab
     # /sbin/Init execute the program located in /etc/inittab
+    # id:runlevels:action:process
     cat <<EOF > $rootfs/etc/inittab
 # Full multiuser mode
 id:3:initdefault:

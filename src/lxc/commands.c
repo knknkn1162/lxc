@@ -70,12 +70,15 @@ static int receive_answer(int sock, struct lxc_answer *answer)
 	return ret;
 }
 
-/*
-struct lxc_command {
-	struct lxc_request request;
-	struct lxc_answer answer;
-};
- */
+  /*
+    struct lxc_command command = {
+      .request = { .type = LXC_COMMAND_STOP },
+      .answer = {0}
+    };
+    int ret, stopped = 0;
+
+    ret = lxc_command(name, &command,&stopped);
+  */
 static int __lxc_command(const char *name, struct lxc_command *command,
 			 int *stopped, int stay_connected)
 {
@@ -84,8 +87,10 @@ static int __lxc_command(const char *name, struct lxc_command *command,
 	char *offset = &path[1];
 
   // #define abstractname LXCPATH "/%s/command" where LXCPATH=/usr/local/lib/lxc
+  // /usr/local/lib/lxc/${container_name}/command
 	sprintf(offset, abstractname, name);
 
+  // socket and connect
 	sock = lxc_af_unix_connect(path);
 	if (sock < 0 && errno == ECONNREFUSED) {
 		*stopped = 1;
@@ -109,6 +114,7 @@ static int __lxc_command(const char *name, struct lxc_command *command,
 		goto out;
 	}
 
+  // ret = lxc_af_unix_recv_fd(sock, &answer->fd, answer, sizeof(*answer));
 	ret = receive_answer(sock, &command->answer);
 out:
 	if (!stay_connected || ret < 0)
@@ -190,6 +196,7 @@ static void command_fd_cleanup(int fd, struct lxc_handler *handler,
 	close(fd);
 }
 
+// 	ret = lxc_mainloop_add_handler(descr, connection, command_handler, data);
 static int command_handler(int fd, void *data, struct lxc_epoll_descr *descr)
 {
 	int ret;
@@ -234,11 +241,16 @@ out_close:
 	goto out;
 }
 
+// 	ret = lxc_mainloop_add_handler(descr, fd, incoming_command_handler, handler);
 static int incoming_command_handler(int fd, void *data,
 				    struct lxc_epoll_descr *descr)
 {
 	int opt = 1, ret = -1, connection;
 
+  // blocks until client connects
+
+  /* Accept a connection. The connection is returned on a new socket, 'cfd'; the listening socket ('sfd') remains open and can be used to accept further connections. */
+  // cfd = accept(sfd, NULL, NULL);
 	connection = accept(fd, NULL, 0);
 	if (connection < 0) {
 		SYSERROR("failed to accept connection");
@@ -250,6 +262,10 @@ static int incoming_command_handler(int fd, void *data,
 		goto out_close;
 	}
 
+  // SO_PASSCRED: opt=1
+  // Enables the receiving of the credentials of the sending process in an  ancillary  message.
+  // When  this option is set and the socket is not yet connected a unique name in the abstract
+  // namespace will be generated automatically.  Expects an integer boolean flag.
 	if (setsockopt(connection, SOL_SOCKET,
 		       SO_PASSCRED, &opt, sizeof(opt))) {
 		SYSERROR("failed to enable credential on socket");
@@ -278,9 +294,11 @@ extern int lxc_command_mainloop_add(const char *name,
 	char path[sizeof(((struct sockaddr_un *)0)->sun_path)] = { 0 };
 	char *offset = &path[1];
 
+  // #define abstractname /usr/local/lib/lxc "/%s/command"
 	sprintf(offset, abstractname, name);
 
-  // 	fd = socket(PF_UNIX, type, 0);
+  // 	fd = socket(PF_UNIX, type, 0); path = /usr/local/lib/lxc/${container_name}/command
+  // communicate with each process
 	fd = lxc_af_unix_open(path, SOCK_STREAM, 0);
 	if (fd < 0) {
 		ERROR("failed to create the command service point");
