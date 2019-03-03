@@ -862,7 +862,7 @@ static char *lxcbasename(char *path)
 	char *p = path + strlen(path) - 1;
 	while (*p != '/' && p > path)
 		p--;
-	return p;
+	return ++p;
 }
 
 // create_run_template(c, tpath, !!(flags & LXC_CREATE_QUIET), argv)
@@ -883,7 +883,7 @@ static bool create_run_template(struct lxc_container *c, char *tpath, bool need_
 	if (pid == 0) { // child
 		char *patharg, *namearg, *rootfsarg, *src;
 		struct bdev *bdev = NULL;
-		int i;
+    int i;
 		int ret, len, nargs = 0;
 		char **newargv;
 		struct lxc_conf *conf = c->lxc_conf;
@@ -1096,7 +1096,13 @@ static bool create_run_template(struct lxc_container *c, char *tpath, bool need_
 			free(newargv);
 			newargv = n2;
 		}
+    int idx;
 		/* execute */
+    for(idx = 0; newargv[idx] != NULL; idx++) {
+      // /lxc-debian --path=/usr/local/var/lib/lxc/debian01 --name=debian01 --rootfs=/usr/local/var/lib/lxc/debian01/rootfs
+      DEBUG("newargv[%d]: %s", idx, newargv[idx]);
+    }
+    // int execvp(const char *file, char *const argv[]);
 		execvp(tpath, newargv);
 		SYSERROR("failed to execute template %s", tpath);
 		exit(1);
