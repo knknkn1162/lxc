@@ -158,24 +158,37 @@ static int ongoing_create(struct lxc_container *c)
 static int create_partial(struct lxc_container *c)
 {
 	// $lxcpath + '/' + $name + '/partial' + \0
+  // LXCPATH = /usr/local/var/lib/lxc
 	int len = strlen(c->config_path) + strlen(c->name) + 10;
 	char *path = alloca(len);
 	int fd, ret;
 	struct flock lk;
 
+  // /usr/local/var/lib/lxc/${container_name}/partial
 	ret = snprintf(path, len, "%s/%s/partial", c->config_path, c->name);
 	if (ret < 0 || ret >= len) {
 		ERROR("Error writing partial pathname");
 		return -1;
 	}
+
 	if ((fd=open(path, O_RDWR | O_CREAT | O_EXCL, 0755)) < 0) {
 		SYSERROR("Error creating partial file");
 		return -1;
 	}
+/*
+struct flock {
+    ...
+    short l_type;    // Type of lock: F_RDLCK, F_WRLCK, F_UNLCK
+    short l_whence;  // How to interpret l_start:  SEEK_SET, SEEK_CUR, SEEK_END
+    off_t l_start;   // Starting offset for lock
+    off_t l_len;     // Number of bytes to lock
+    pid_t l_pid;     // PID of process blocking our lock (set by F_GETLK and F_OFD_GETLK)
+}; */
 	lk.l_type = F_WRLCK;
-	lk.l_whence = SEEK_SET;
+	lk.l_whence = SEEK_SET; // starting the head of the file
 	lk.l_start = 0;
 	lk.l_len = 0;
+  // set lock with wait
 	if (fcntl(fd, F_SETLKW, &lk) < 0) {
 		SYSERROR("Error locking partial file %s", path);
 		close(fd);
@@ -450,6 +463,8 @@ static bool lxcapi_load_config(struct lxc_container *c, const char *alt_file)
 	if (lret)
 		return false;
 
+  // static bool load_config_locked(struct lxc_container *c, const char *fname)
+  // lxc_conf_init and lxc_conf_read(fname, lxc_conf)
 	ret = load_config_locked(c, fname);
 
 	if (need_disklock)
@@ -850,6 +865,7 @@ static char *lxcbasename(char *path)
 	return p;
 }
 
+// create_run_template(c, tpath, !!(flags & LXC_CREATE_QUIET), argv)
 static bool create_run_template(struct lxc_container *c, char *tpath, bool need_null_stdfds,
 				char *const argv[])
 {
@@ -930,6 +946,7 @@ static bool create_run_template(struct lxc_container *c, char *tpath, bool need_
 		newargv = malloc(nargs * sizeof(*newargv));
 		if (!newargv)
 			exit(1);
+    // /usr/local/share/lxc/templates
 		newargv[0] = lxcbasename(tpath);
 
 		len = strlen(c->config_path) + strlen(c->name) + strlen("--path=") + 2;
@@ -1085,6 +1102,7 @@ static bool create_run_template(struct lxc_container *c, char *tpath, bool need_
 		exit(1);
 	}
 
+  // parent
 	if (wait_for_pid(pid) != 0) {
 		ERROR("container creation template for %s failed", c->name);
 		return false;
@@ -1093,6 +1111,7 @@ static bool create_run_template(struct lxc_container *c, char *tpath, bool need_
 	return true;
 }
 
+// write /usr/local/var/lib/lxc/debian01/config
 static bool prepend_lxc_header(char *path, const char *t, char *const argv[])
 {
 	long flen;
@@ -1164,6 +1183,8 @@ static bool prepend_lxc_header(char *path, const char *t, char *const argv[])
 	fprintf(f, "\n");
 #endif
 	fprintf(f, "# For additional config options, please look at lxc.container.conf(5)\n");
+  // size_t fwrite(const void *buf, size_t size, size_t n, FILE *fp); 
+  // sizeof(char) = 1
 	if (fwrite(contents, 1, flen, f) != flen) {
 		SYSERROR("Writing original contents");
 		free(contents);
@@ -1278,6 +1299,7 @@ static bool lxcapi_create(struct lxc_container *c, const char *t,
 	}
 
 	/* Mark that this container is being created */
+  // fd=open(path, O_RDWR | O_CREAT | O_EXCL, 0755)
 	if ((partial_fd = create_partial(c)) < 0)
 		goto out;
 
@@ -1324,6 +1346,7 @@ static bool lxcapi_create(struct lxc_container *c, const char *t,
 	if (!load_config_locked(c, c->configfile))
 		goto out_unlock;
 
+  // tpath = get_template_path(t);
 	if (!create_run_template(c, tpath, !!(flags & LXC_CREATE_QUIET), argv))
 		goto out_unlock;
 
@@ -3316,6 +3339,7 @@ static int lxcapi_attach_run_waitl(struct lxc_container *c, lxc_attach_options_t
 	return ret;
 }
 
+// 	c = lxc_container_new(my_args.name, my_args.lxcpath[0]);
 struct lxc_container *lxc_container_new(const char *name, const char *configpath)
 {
 	struct lxc_container *c;

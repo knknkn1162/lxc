@@ -182,8 +182,22 @@ static bool validate_bdev_args(struct lxc_arguments *a)
 
 int main(int argc, char *argv[])
 {
+  /*
+  struct lxc_container {
+    char *name; char *configfile; char *pidfile;
+    struct lxc_lock *slock; struct lxc_lock *privlock; int numthreads;
+    struct lxc_conf *lxc_conf; char *error_string; int error_num;
+    bool daemonize; char *config_path; // the others are functions
+   */
 	struct lxc_container *c;
-	struct bdev_specs spec;
+/*
+struct bdev_specs {
+	char *fstype; uint64_t fssize;
+	struct { char *zfsroot; } zfs;
+	struct { char *vg; char *lv; char *thinpool; } lvm;
+	char *dir; };
+ */
+	struct bdev_specs spec; /* brief Specifications for how to create a new backing store */
 	int flags = 0;
 
 	if (lxc_arguments_parse(&my_args, argc, argv))
@@ -215,6 +229,7 @@ int main(int argc, char *argv[])
 	if (strcmp(my_args.bdevtype, "none") == 0)
 		my_args.bdevtype = "dir";
 
+  // geteuid() returns the effective user ID of the calling process.
 	if (geteuid()) {
 		if (mkdir_p(my_args.lxcpath[0], 0755)) {
 			exit(1);
@@ -231,6 +246,11 @@ int main(int argc, char *argv[])
 	}
 
 
+  // struct lxc_container *lxc_container_new(const char *name, const char *configpath)
+  // required is_defined, load_config, create
+	// c->is_defined = lxcapi_is_defined;
+  // c->load_config = lxcapi_load_config;
+  // c->create = lxcapi_create;
 	c = lxc_container_new(my_args.name, my_args.lxcpath[0]);
 	if (!c) {
 		fprintf(stderr, "System error loading container\n");
@@ -243,6 +263,8 @@ int main(int argc, char *argv[])
 	if (my_args.configfile)
 		c->load_config(c, my_args.configfile);
 	else
+    // const char *lxc_global_config_value(const char *option_name)=/usr/local/etc/lxc/default.conf
+    // static bool lxcapi_load_config(struct lxc_container *c, const char *alt_file)
 		c->load_config(c, lxc_global_config_value("lxc.default_config"));
 
 	if (my_args.fstype)
@@ -268,8 +290,14 @@ int main(int argc, char *argv[])
 
 	if (strcmp(my_args.bdevtype, "_unset") == 0)
 		my_args.bdevtype = NULL;
+  // Don't produce any output
 	if (my_args.quiet)
+    // Redirect \c stdin to \c /dev/zero and \c stdout and \c stderr to \c /dev/null
 		flags = LXC_CREATE_QUIET;
+	// c = lxc_container_new(my_args.name, my_args.lxcpath[0]);
+  // 	struct bdev_specs spec; /* brief Specifications for how to create a new backing store */
+  // c->create = static bool lxcapi_create(struct lxc_container *c, const char *t, const char *bdevtype, struct bdev_specs *specs, int flags, char *const argv[])
+
 	if (!c->create(c, my_args.template, my_args.bdevtype, &spec, flags, &argv[optind])) {
 		ERROR("Error creating container %s", c->name);
 		lxc_container_put(c);

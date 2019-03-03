@@ -41,7 +41,9 @@
 #define LXC_LOG_PREFIX_SIZE	32
 #define LXC_LOG_BUFFER_SIZE	512
 
+// Define if the compiler supports __thread
 #ifdef HAVE_TLS
+// __thread: thread-local storage
 __thread int lxc_log_fd = -1;
 static __thread char log_prefix[LXC_LOG_PREFIX_SIZE] = "lxc";
 static __thread char *log_fname = NULL;
@@ -320,6 +322,7 @@ static int _lxc_log_set_file(const char *name, const char *lxcpath, int create_d
 	return ret;
 }
 
+// 	if (lxc_log_init(my_args.name, my_args.log_file, my_args.log_priority, my_args.progname, my_args.quiet, my_args.lxcpath[0]))
 extern int lxc_log_init(const char *name, const char *file,
 			const char *priority, const char *prefix, int quiet,
 			const char *lxcpath)

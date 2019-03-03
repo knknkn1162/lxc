@@ -209,6 +209,13 @@ extern int lxc_arguments_parse(struct lxc_arguments *args,
 			if (ret < 0)
 				return ret;
 			break;
+    /*
+      Usage: lxc-create [-B|--bdev=BDEV] [-f|--config=CONFIG] [-t|--template=TEMPLATE] [-0|--lvname=LVNAME]
+        [-1|--vgname=VGNAME] [-2|--thinpool=THINPOOL] [-3|--fstype=FSTYPE] [-4|--fssize=FSSIZE]
+        [-5|--zfsroot=ZFSROOT] [-6|--dir=DIR] [-n|--name=NAME] [-h|--help]
+        [--usage] [--version] [-q|--quiet] [-o|--logfile=LOGFILE]
+        [-l|--logpriority=LOGPRIORITY] [-P|--lxcpath=LXCPATH]
+     */
 		case OPT_USAGE: print_usage(args->options, args);
 		case OPT_VERSION: print_version();
 		case '?':	print_help(args, 1);

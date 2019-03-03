@@ -87,6 +87,11 @@ static char *copy_global_config_value(char *p)
 
 const char *lxc_global_config_value(const char *option_name)
 {
+  /*
+#define DEFAULT_VG "lxc"
+#define DEFAULT_THIN_POOL "lxc"
+#define DEFAULT_ZFSROOT "lxc"
+   */
 	static const char * const options[][2] = {
 		{ "lxc.bdev.lvm.vg",        DEFAULT_VG      },
 		{ "lxc.bdev.lvm.thin_pool", DEFAULT_THIN_POOL },
@@ -131,9 +136,19 @@ const char *lxc_global_config_value(const char *option_name)
 		user_cgroup_pattern = strdup("lxc/%n");
 	}
 	else {
+    // LXC_GLOBAL_CONF = /usr/local/etc/lxc/lxc.conf
 		user_config_path = strdup(LXC_GLOBAL_CONF);
+    // LXC_DEFAULT_CONFIG = /usr/local/etc/lxc/default.conf
+    /*
+      lxc.network.type = veth
+      lxc.network.link = lxcbr0
+      lxc.network.flags = up
+      lxc.network.hwaddr = 00:16:3e:xx:xx:xx
+    */
 		user_default_config_path = strdup(LXC_DEFAULT_CONFIG);
+    // LXCPATH = /usr/local/var/lib/lxc
 		user_lxc_path = strdup(LXCPATH);
+    // DEFAULT_CGROUP_PATTERN = /lxc/%n
 		user_cgroup_pattern = strdup(DEFAULT_CGROUP_PATTERN);
 	}
 
@@ -146,6 +161,7 @@ const char *lxc_global_config_value(const char *option_name)
 		if (!strcmp(option_name, (*ptr)[0]))
 			break;
 	}
+  // if de
 	if (!(*ptr)[0]) {
 		free(user_config_path);
 		free(user_default_config_path);
@@ -155,6 +171,7 @@ const char *lxc_global_config_value(const char *option_name)
 		return NULL;
 	}
 
+  // if "lxc.default_config", i = 3
 	if (values[i]) {
 		free(user_config_path);
 		free(user_default_config_path);
@@ -163,6 +180,7 @@ const char *lxc_global_config_value(const char *option_name)
 		return values[i];
 	}
 
+  // open_mode |= O_CLOEXEC; FILE* fin
 	fin = fopen_cloexec(user_config_path, "r");
 	free(user_config_path);
 	if (fin) {
@@ -218,6 +236,7 @@ const char *lxc_global_config_value(const char *option_name)
 		user_lxc_path = NULL;
 	}
 	else if (strcmp(option_name, "lxc.default_config") == 0) {
+    // LXC_DEFAULT_CONFIG = /usr/local/etc/lxc/default.conf
 		values[i] = user_default_config_path;
 		user_default_config_path = NULL;
 	}
@@ -281,6 +300,7 @@ FILE *fopen_cloexec(const char *path, const char *mode)
 	}
 	for (; mode[step]; step++)
 		if (mode[step] == 'x')
+      // created file
 			open_mode |= O_EXCL;
 	open_mode |= O_CLOEXEC;
 
@@ -288,6 +308,7 @@ FILE *fopen_cloexec(const char *path, const char *mode)
 	if (fd < 0)
 		return NULL;
 
+  // FILE *fdopen(int fd, const char *mode);
 	ret = fdopen(fd, mode);
 	saved_errno = errno;
 	if (!ret)

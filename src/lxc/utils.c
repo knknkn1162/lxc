@@ -1098,6 +1098,7 @@ char *get_template_path(const char *t)
 		return tpath;
 	}
 
+  // LXCTEMPLATEDIR = /usr/local/share/lxc/templates
 	len = strlen(LXCTEMPLATEDIR) + strlen(t) + strlen("/lxc-") + 1;
 	tpath = malloc(len);
 	if (!tpath)
