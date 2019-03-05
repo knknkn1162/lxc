@@ -6,6 +6,29 @@
 
 ## installation
 
+We execute this program using ubuntu:18.04@Vagrant:
+
+```bash
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+Vagrant.configure('2') do |config|
+  config.vm.box = 'ubuntu/bionic64'
+  config.vm.synced_folder './', '/home/vagrant/shared'
+  config.vm.provider 'virtualbox' do |vb|
+    vb.memory = '2048'
+    vb.cpus = 2
+  end
+  config.vm.provision 'shell', inline: <<-SHELL
+    apt-get update
+    # for seccomp.h and sys/capability.h
+    apt-get install -y gcc make autotools-dev automake pkg-config libcap-dev debootstrap uidmap
+  SHELL
+end
+```
+
+This is how to make this:
+
 ```bash
 $ ./autogen.sh
 # Without MAJOR_IN_SYSMACROS, the error occurs; `bdev.c:832:13: error: In the GNU C Library, "major" is defined`.
