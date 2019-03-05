@@ -216,6 +216,7 @@ char *get_rundir()
 	const char *homedir;
 	struct stat sb;
 
+  // RUNTIME_PATH = /run
 	if (stat(RUNTIME_PATH, &sb) < 0) {
 		return NULL;
 	}
@@ -1047,6 +1048,7 @@ int detect_ramfs_rootfs(void)
 	return 0;
 }
 
+// 	cmdpath = on_path("newuidmap");
 char *on_path(char *cmd) {
 	char *path = NULL;
 	char *entry = NULL;
@@ -1054,6 +1056,11 @@ char *on_path(char *cmd) {
 	char cmdpath[MAXPATHLEN];
 	int ret;
 
+  /*
+    like this:
+    LANG: ja_JP.UTF-8
+    SHELL: /bin/bash
+   */
 	path = getenv("PATH");
 	if (!path)
 		return NULL;
@@ -1062,6 +1069,7 @@ char *on_path(char *cmd) {
 	if (!path)
 		return NULL;
 
+  // char *strtok_r(char *str, const char *delim, char **saveptr);
 	entry = strtok_r(path, ":", &saveptr);
 	while (entry) {
 		ret = snprintf(cmdpath, MAXPATHLEN, "%s/%s", entry, cmd);

@@ -143,8 +143,12 @@ static int ongoing_create(struct lxc_container *c)
 	lk.l_type = F_WRLCK;
 	lk.l_whence = SEEK_SET;
 	lk.l_start = 0;
-	lk.l_len = 0;
-	lk.l_pid = -1;
+	lk.l_len = 0; // 0 means "until EOF
+	lk.l_pid = -1; // Process preventing our lock (F_GETLK only)
+  // Check if it would be possible to acquire the lock
+  // If the lock  could  be  placed,  fcntl()  does  not actually place it, but returns F_UNLCK in the l_type field of lock and **leaves** the other fields of the structure unchanged.
+  // If the conflicting lock is an open file description lock(based on flock), then l_pid is set to -1, but in this case, it's no possible to conflict lock.
+  //  open file description record locks are associated with an open file description rather than a process.
 	if (fcntl(fd, F_GETLK, &lk) == 0 && lk.l_pid != -1) {
 		// create is still ongoing
 		close(fd);
@@ -428,13 +432,17 @@ static pid_t lxcapi_init_pid(struct lxc_container *c)
 
 static bool load_config_locked(struct lxc_container *c, const char *fname)
 {
+  DEBUG("load_config_locked: fname: %s", fname);
 	if (!c->lxc_conf)
 		c->lxc_conf = lxc_conf_init();
+  // static int parse_line(char *buffer, void *data)
+  // lxc_config_read requires 0 which is success
 	if (c->lxc_conf && !lxc_config_read(fname, c->lxc_conf))
 		return true;
 	return false;
 }
 
+// lxcapi_load_config(c, /usr/local/etc/lxc/default.conf)
 static bool lxcapi_load_config(struct lxc_container *c, const char *alt_file)
 {
 	bool ret = false, need_disklock = false;
@@ -453,12 +461,15 @@ static bool lxcapi_load_config(struct lxc_container *c, const char *alt_file)
 	 * we only need to lock the in-memory container.  If loading the
 	 * container's config file, take the disk lock.
 	 */
+  // if alt_file=NULL, skip
 	if (strcmp(fname, c->configfile) == 0)
 		need_disklock = true;
 
 	if (need_disklock)
+    // lxclock(c->privlock, 0))) and lxclock(c->slock, 0))) {
 		lret = container_disk_lock(c);
 	else
+    // return lxclock(c->privlock, 0);
 		lret = container_mem_lock(c);
 	if (lret)
 		return false;
@@ -757,13 +768,16 @@ static bool lxcapi_stop(struct lxc_container *c)
 	return ret == 0;
 }
 
+// path=/usr/local/var/lib/lxc/${container_name}
 static int do_create_container_dir(const char *path, struct lxc_conf *conf)
 {
 	int ret = -1, lasterr;
+  // void *alloca(size_t size);
 	char *p = alloca(strlen(path)+1);
 	mode_t mask = umask(0002);
 	ret = mkdir(path, 0770);
 	lasterr = errno;
+  // mode_t umask(mode_t mask); return prev mode_t
 	umask(mask);
 	errno = lasterr;
 	if (ret) {
@@ -775,6 +789,7 @@ static int do_create_container_dir(const char *path, struct lxc_conf *conf)
 		}
 	}
 	strcpy(p, path);
+  // fork & exec lxc-usernsexec
 	if (!lxc_list_empty(&conf->id_map) && chown_mapped_root(p, conf) != 0) {
 		ERROR("Failed to chown container dir");
 		ret = -1;
@@ -794,6 +809,7 @@ static bool create_container_dir(struct lxc_container *c)
 	s = malloc(len);
 	if (!s)
 		return false;
+  // /usr/local/var/lib/lxc/${container_name}
 	ret = snprintf(s, len, "%s/%s", c->config_path, c->name);
 	if (ret < 0 || ret >= len) {
 		free(s);
@@ -1250,6 +1266,7 @@ static bool lxcapi_create(struct lxc_container *c, const char *t,
 		return false;
 
 	if (t) {
+    // /usr/local/share/lxc/templates/debian01
 		tpath = get_template_path(t);
 		if (!tpath) {
 			ERROR("bad template: %s", t);
@@ -1263,6 +1280,7 @@ static bool lxcapi_create(struct lxc_container *c, const char *t,
 	 * an existing container.  Return an error, but do NOT delete the
 	 * container.
 	 */
+  // /usr/local/lib/lxc/rootfs
 	if (lxcapi_is_defined(c) && c->lxc_conf && c->lxc_conf->rootfs.path &&
 			access(c->lxc_conf->rootfs.path, F_OK) == 0 && tpath) {
 		ERROR("Container %s:%s already exists", c->config_path, c->name);
@@ -1270,12 +1288,17 @@ static bool lxcapi_create(struct lxc_container *c, const char *t,
 	}
 
 	if (!c->lxc_conf) {
+    // c->load_config = lxcapi_load_config;
+    // lxc_conf_init and lxc_conf_read(fname, lxc_conf)
 		if (!c->load_config(c, lxc_global_config_value("lxc.default_config"))) {
 			ERROR("Error loading default configuration file %s", lxc_global_config_value("lxc.default_config"));
 			goto free_tpath;
 		}
 	}
 
+  // do_create_container_dir -> chown_mapped_root
+  // // <fork> -> <exec> lxc-usernsexec
+  // // <fork> -> do_child -> exec(/bin/bash)
 	if (!create_container_dir(c))
 		goto free_tpath;
 
@@ -1327,6 +1350,7 @@ static bool lxcapi_create(struct lxc_container *c, const char *t,
 	if (pid == 0) { // child
 		struct bdev *bdev = NULL;
 
+    // static struct bdev *do_bdev_create(struct lxc_container *c, const char *type, struct bdev_specs *specs)
 		if (!(bdev = do_bdev_create(c, bdevtype, specs))) {
 			ERROR("Error creating backing store type %s for %s",
 				bdevtype ? bdevtype : "(none)", c->name);
@@ -1334,6 +1358,7 @@ static bool lxcapi_create(struct lxc_container *c, const char *t,
 		}
 
 		/* save config file again to store the new rootfs location */
+    // static bool lxcapi_save_config(struct lxc_container *c, const char *alt_file)
 		if (!c->save_config(c, NULL)) {
 			ERROR("failed to save starting configuration for %s", c->name);
 			// parent task won't see bdev in config so we delete it
@@ -1353,6 +1378,7 @@ static bool lxcapi_create(struct lxc_container *c, const char *t,
 		goto out_unlock;
 
   // tpath = get_template_path(t);
+  // execvp(tpath, newargv); for child pid and its parent pid wait for child.
 	if (!create_run_template(c, tpath, !!(flags & LXC_CREATE_QUIET), argv))
 		goto out_unlock;
 
@@ -1366,6 +1392,8 @@ static bool lxcapi_create(struct lxc_container *c, const char *t,
 			goto out_unlock;
 		}
 	}
+  // lxc_conf_init();
+  // lxc_config_read(fname, c->lxc_conf)
 	ret = load_config_locked(c, c->configfile);
 
 out_unlock:
@@ -1873,9 +1901,11 @@ static bool lxcapi_save_config(struct lxc_container *c, const char *alt_file)
 	if (lret)
 		return false;
 
+  // c->configfile is alt_file
 	fout = fopen(alt_file, "w");
 	if (!fout)
 		goto out;
+  // void write_config(FILE *fout, struct lxc_conf *c)
 	write_config(fout, c->lxc_conf);
 	fclose(fout);
 	ret = true;
@@ -3345,7 +3375,8 @@ static int lxcapi_attach_run_waitl(struct lxc_container *c, lxc_attach_options_t
 	return ret;
 }
 
-// 	c = lxc_container_new(my_args.name, my_args.lxcpath[0]);
+// c = lxc_container_new(my_args.name, my_args.lxcpath[0]);
+// c->load_config(c, lxc_global_config_value("lxc.default_config"));
 struct lxc_container *lxc_container_new(const char *name, const char *configpath)
 {
 	struct lxc_container *c;
@@ -3360,6 +3391,7 @@ struct lxc_container *lxc_container_new(const char *name, const char *configpath
 	if (configpath)
 		c->config_path = strdup(configpath);
 	else
+    // c->config_path=$LXCPATH=/usr/local/var/lib/lxc when priviledged process
 		c->config_path = strdup(lxc_global_config_value("lxc.lxcpath"));
 
 	if (!c->config_path) {
@@ -3376,24 +3408,33 @@ struct lxc_container *lxc_container_new(const char *name, const char *configpath
 	strcpy(c->name, name);
 
 	c->numthreads = 1;
+  // Container semaphore lock based on LXC_LOCK_FLOCK;
 	if (!(c->slock = lxc_newlock(c->config_path, name))) {
 		fprintf(stderr, "failed to create lock\n");
 		goto err;
 	}
 
+  // Container private lock.
+  // 		l->type = LXC_LOCK_ANON_SEM (Unnamed Semaphore)
 	if (!(c->privlock = lxc_newlock(NULL, NULL))) {
 		fprintf(stderr, "failed to alloc privlock\n");
 		goto err;
 	}
 
+  // c->configfile=$lxc_path + "/" + c->name + "/" + "config" + '\0'
 	if (!set_config_filename(c)) {
 		fprintf(stderr, "Error allocating config file pathname\n");
 		goto err;
 	}
 
+  // lxcapi_load_config load c->lxc_conf on c->configfile
+  // ret = load_config_locked(c, c->configfile);
 	if (file_exists(c->configfile) && !lxcapi_load_config(c, NULL))
 		goto err;
 
+  // We detect this by creating a 'partial' file under the container directory, and keeping an advisory lock.
+  // return 2 .. create completed but partial is still there.
+  // snprintf(path, len, "%s/%s/partial", c->config_path, c->name);
 	if (ongoing_create(c) == 2) {
 		ERROR("Error: %s creation was not completed", c->name);
 		lxcapi_destroy(c);

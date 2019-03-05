@@ -200,14 +200,15 @@ struct bdev_specs {
 	struct bdev_specs spec; /* brief Specifications for how to create a new backing store */
 	int flags = 0;
 
+  // extern int lxc_arguments_parse(struct lxc_arguments *args, int argc, char * const argv[])
+  // my_args->configfile = -f ..;
 	if (lxc_arguments_parse(&my_args, argc, argv))
 		exit(1);
 
 	if (!my_args.log_file)
 		my_args.log_file = "none";
 
-	if (lxc_log_init(my_args.name, my_args.log_file, my_args.log_priority,
-			 my_args.progname, my_args.quiet, my_args.lxcpath[0]))
+	if (lxc_log_init(my_args.name, my_args.log_file, my_args.log_priority, my_args.progname, my_args.quiet, my_args.lxcpath[0]))
 		exit(1);
 	lxc_log_options_no_override();
 
@@ -231,6 +232,7 @@ struct bdev_specs {
 
   // geteuid() returns the effective user ID of the calling process.
 	if (geteuid()) {
+    // my_args.lxcpath is the type `const char **lxcpath`
 		if (mkdir_p(my_args.lxcpath[0], 0755)) {
 			exit(1);
 		}
@@ -247,11 +249,15 @@ struct bdev_specs {
 
 
   // struct lxc_container *lxc_container_new(const char *name, const char *configpath)
-  // required is_defined, load_config, create
+  // lxcapi_load_config(c, NULL) -> load_config_locked(c, c->configfile);
+  // c->configfile -> $LXCPATH/${name}/config
+  // and create snprintf(path, len, "%s/%s/partial", c->config_path, c->name); at ongoing_create
+  DEBUG("lxc_container_new(%s, %s)", my_args.name, my_args.lxcpath[0]);
+	c = lxc_container_new(my_args.name, my_args.lxcpath[0]);
+  // Now, we set callbacks in the member of struct:
 	// c->is_defined = lxcapi_is_defined;
   // c->load_config = lxcapi_load_config;
   // c->create = lxcapi_create;
-	c = lxc_container_new(my_args.name, my_args.lxcpath[0]);
 	if (!c) {
 		fprintf(stderr, "System error loading container\n");
 		exit(1);
@@ -260,11 +266,22 @@ struct bdev_specs {
 		fprintf(stderr, "Container already exists\n");
 		exit(1);
 	}
+
+  DEBUG("load_config(c, %s or %s)", my_args.configfile, lxc_global_config_value("lxc.default_config"));
 	if (my_args.configfile)
+    // load_config_locked(c, my_args.configfile);
+    // file designated by -f option
 		c->load_config(c, my_args.configfile);
 	else
     // const char *lxc_global_config_value(const char *option_name)=/usr/local/etc/lxc/default.conf
     // static bool lxcapi_load_config(struct lxc_container *c, const char *alt_file)
+    /*
+      $ cat /usr/local/etc/lxc/default.conf
+      lxc.network.type = veth
+      lxc.network.link = lxcbr0
+      lxc.network.flags = up
+      lxc.network.hwaddr = 00:16:3e:xx:xx:xx
+     */
 		c->load_config(c, lxc_global_config_value("lxc.default_config"));
 
 	if (my_args.fstype)
@@ -294,9 +311,10 @@ struct bdev_specs {
 	if (my_args.quiet)
     // Redirect \c stdin to \c /dev/zero and \c stdout and \c stderr to \c /dev/null
 		flags = LXC_CREATE_QUIET;
-	// c = lxc_container_new(my_args.name, my_args.lxcpath[0]);
+	// c is created at lxc_container_new(my_args.name, my_args.lxcpath[0]);
   // 	struct bdev_specs spec; /* brief Specifications for how to create a new backing store */
   // c->create = static bool lxcapi_create(struct lxc_container *c, const char *t, const char *bdevtype, struct bdev_specs *specs, int flags, char *const argv[])
+  // use fork()
 	if (!c->create(c, my_args.template, my_args.bdevtype, &spec, flags, &argv[optind])) {
 		ERROR("Error creating container %s", c->name);
 		lxc_container_put(c);

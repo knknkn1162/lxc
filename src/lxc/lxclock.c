@@ -111,6 +111,7 @@ static char *lxclock_name(const char *p, const char *n)
 
 	/* length of "/lxc/lock/" + $lxcpath + "/" + $lxcname + '\0' */
 	len = strlen("/lxc/lock/") + strlen(n) + strlen(p) + 2;
+  // often "/run"
 	rundir = get_rundir();
 	if (!rundir)
 		return NULL;
@@ -151,6 +152,8 @@ static sem_t *lxc_new_unnamed_sem(void)
 	s = malloc(sizeof(*s));
 	if (!s)
 		return NULL;
+  // int sem_init(sem_t *sem, int pshared, unsigned int value);
+  // The sem_init() function initializes the unnamed semaphore pointed to by sem to the value specified by value.
 	ret = sem_init(s, 0, 1);
 	if (ret) {
 		free(s);
@@ -169,6 +172,7 @@ struct lxc_lock *lxc_newlock(const char *lxcpath, const char *name)
 
 	if (!name) {
 		l->type = LXC_LOCK_ANON_SEM;
+    // 	ret = sem_init(s, 0, 1);
 		l->u.sem = lxc_new_unnamed_sem();
 		if (!l->u.sem) {
 			free(l);
@@ -178,6 +182,7 @@ struct lxc_lock *lxc_newlock(const char *lxcpath, const char *name)
 	}
 
 	l->type = LXC_LOCK_FLOCK;
+  // generate filename to be "/run/lxc/lock/$lxcpath/$lxcname (if root)
 	l->u.f.fname = lxclock_name(lxcpath, name);
 	if (!l->u.f.fname) {
 		free(l);
@@ -190,14 +195,31 @@ out:
 	return l;
 }
 
+
+/*
+struct lxc_lock {
+	short type; //!< Lock type
+
+	union {
+		sem_t *sem; //!< Anonymous semaphore (LXC_LOCK_ANON_SEM)
+		//! LXC_LOCK_FLOCK details
+		struct {
+			int   fd; //!< fd on which a lock is held (if not -1)
+			char *fname; //!< Name of lock
+		} f;
+	} u; //!< Container for lock type elements
+};
+*/
 int lxclock(struct lxc_lock *l, int timeout)
 {
 	int ret = -1, saved_errno = errno;
 	struct flock lk;
 
 	switch(l->type) {
+  // #define LXC_LOCK_ANON_SEM 1 /*!< Anonymous semaphore lock */
 	case LXC_LOCK_ANON_SEM:
 		if (!timeout) {
+      // block until sem>0
 			ret = sem_wait(l->u.sem);
 			if (ret == -1)
 				saved_errno = errno;
@@ -208,11 +230,13 @@ int lxclock(struct lxc_lock *l, int timeout)
 				goto out;
 			}
 			ts.tv_sec += timeout;
+      // The sem_wait() and sem_timedwait() functions used to decrement a POSIX sema- phore.
 			ret = sem_timedwait(l->u.sem, &ts);
 			if (ret == -1)
 				saved_errno = errno;
 		}
 		break;
+  // #define LXC_LOCK_FLOCK    2 /*!< flock(2) lock */
 	case LXC_LOCK_FLOCK:
 		ret = -2;
 		if (timeout) {
@@ -236,6 +260,7 @@ int lxclock(struct lxc_lock *l, int timeout)
 		lk.l_whence = SEEK_SET;
 		lk.l_start = 0;
 		lk.l_len = 0;
+    // block
 		ret = fcntl(l->u.f.fd, F_SETLKW, &lk);
 		if (ret == -1)
 			saved_errno = errno;
@@ -353,8 +378,12 @@ int container_disk_lock(struct lxc_container *c)
 {
 	int ret;
 
+  // int lxclock(struct lxc_lock *l, int timeout)
+  // Unnamed Semaphore(LXC_LOCK_ANON_SEM)
 	if ((ret = lxclock(c->privlock, 0)))
 		return ret;
+  // 
+  // Container semaphore lock based on LXC_LOCK_FLOCK;
 	if ((ret = lxclock(c->slock, 0))) {
 		lxcunlock(c->privlock);
 		return ret;

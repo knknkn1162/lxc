@@ -331,7 +331,7 @@ extern int lxc_log_init(const char *name, const char *file,
 	int ret;
 
 	if (lxc_log_fd != -1) {
-		WARN("lxc_log_init called with log already initialized");
+		WARN("lxc_log_init called with log already initialized, lxc_log_fd: %d\n", lxc_log_fd);
 		return 0;
 	}
 
@@ -347,8 +347,10 @@ extern int lxc_log_init(const char *name, const char *file,
 	}
 
 	if (prefix)
+    // default prefix is lxc
 		lxc_log_set_prefix(prefix);
 
+  // my_args.log_file
 	if (file) {
 		if (strcmp(file, "none") == 0)
 			return 0;
@@ -369,11 +371,13 @@ extern int lxc_log_init(const char *name, const char *file,
 			lxcpath = LOGPATH;
 
 		/* try LOGPATH if lxcpath is the default for the privileged containers */
+    // LXCPATH = /usr/local/var/lib/lxc
 		if (!geteuid() && strcmp(LXCPATH, lxcpath) == 0)
 			ret = _lxc_log_set_file(name, NULL, 0);
 
 		/* try in lxcpath */
 		if (ret < 0)
+      // ret = __lxc_log_set_file(logfile, create_dirs);
 			ret = _lxc_log_set_file(name, lxcpath, 1);
 
 		/* try LOGPATH in case its writable by the caller */
@@ -442,7 +446,8 @@ extern const char *lxc_log_get_file(void)
 
 extern void lxc_log_set_prefix(const char *prefix)
 {
-	strncpy(log_prefix, prefix, sizeof(log_prefix));
+  // static __thread char log_prefix[LXC_LOG_PREFIX_SIZE] = "lxc";
+  strncpy(log_prefix, prefix, sizeof(log_prefix));
 	log_prefix[sizeof(log_prefix) - 1] = 0;
 }
 
@@ -453,6 +458,7 @@ extern const char *lxc_log_get_prefix(void)
 
 extern void lxc_log_options_no_override()
 {
+  // if log_fname exists
 	if (lxc_log_get_file())
 		lxc_logfile_specified = 1;
 

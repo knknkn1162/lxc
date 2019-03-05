@@ -85,6 +85,7 @@ static char *copy_global_config_value(char *p)
 	return retbuf;
 }
 
+// return values[i]. When option_name=lxc.lxc_path and priviledged process, we get $LXCPATH.
 const char *lxc_global_config_value(const char *option_name)
 {
   /*
@@ -145,6 +146,7 @@ const char *lxc_global_config_value(const char *option_name)
       lxc.network.flags = up
       lxc.network.hwaddr = 00:16:3e:xx:xx:xx
     */
+    // LXC_DEFAULT_CONFIG = /usr/local/etc/lxc/default.conf
 		user_default_config_path = strdup(LXC_DEFAULT_CONFIG);
     // LXCPATH = /usr/local/var/lib/lxc
 		user_lxc_path = strdup(LXCPATH);
@@ -157,6 +159,7 @@ const char *lxc_global_config_value(const char *option_name)
 	char buf[1024], *p, *p2;
 	FILE *fin = NULL;
 
+  // if option_name=lxc.lxcpath, i=3, we use variable `i` from now on.
 	for (i = 0, ptr = options; (*ptr)[0]; ptr++, i++) {
 		if (!strcmp(option_name, (*ptr)[0]))
 			break;
@@ -230,6 +233,7 @@ const char *lxc_global_config_value(const char *option_name)
 		}
 	}
 	/* could not find value, use default */
+	// static __thread const char *values[sizeof(options) / sizeof(options[0])] = { 0 };
 	if (strcmp(option_name, "lxc.lxcpath") == 0) {
 		remove_trailing_slashes(user_lxc_path);
 		values[i] = user_lxc_path;

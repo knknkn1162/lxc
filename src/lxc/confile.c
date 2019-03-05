@@ -2337,6 +2337,7 @@ void write_config(FILE *fout, struct lxc_conf *c)
 	const char *signame;
 
 	if (c->fstab)
+    // 	fout = fopen(alt_file, "w");
 		fprintf(fout, "lxc.mount = %s\n", c->fstab);
 	lxc_list_for_each(it, &c->mount_list) {
 		fprintf(fout, "lxc.mount.entry = %s\n", (char *)it->elem);

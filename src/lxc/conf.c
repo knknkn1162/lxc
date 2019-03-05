@@ -3602,6 +3602,7 @@ static int write_id_mapping(enum idtype idtype, pid_t pid, const char *buf,
 	}
 
 	errno = 0;
+  // continue if errno == EINTR
 	ret = lxc_write_nointr(fd, buf, buf_size);
 	if (ret != buf_size) {
 		SYSERROR("failed to write %cid mapping to \"%s\"",
@@ -3628,6 +3629,7 @@ int lxc_map_ids(struct lxc_list *idmap, pid_t pid)
 	 * will protected it by preventing another user from being handed the
 	 * range by shadow.
 	 */
+  // newuidmap - set the uid mapping of a user namespace
 	cmdpath = on_path("newuidmap");
 	if (cmdpath) {
 		use_shadow = 1;
@@ -3680,6 +3682,7 @@ int lxc_map_ids(struct lxc_list *idmap, pid_t pid)
 			if (fill <= 0 || fill >= left)
 				SYSERROR("snprintf failed, too many mappings");
 			pos += fill;
+      // system() executes a command specified in command by calling /bin/sh -c command
 			ret = system(buf);
 		}
 
@@ -3700,6 +3703,12 @@ bool get_mapped_rootid(struct lxc_conf *conf, enum idtype idtype,
 			unsigned long *val)
 {
 	struct lxc_list *it;
+  // 	struct lxc_list id_map;
+  /*
+  struct id_map {
+    enum idtype idtype; unsigned long hostid, nsid, range; };
+    enum idtype { ID_TYPE_UID, ID_TYPE_GID };
+   */
 	struct id_map *map;
 
 	lxc_list_for_each(it, &conf->id_map) {
@@ -3866,6 +3875,7 @@ void lxc_delete_tty(struct lxc_tty_info *tty_info)
  * root is privileged with respect to hostuid/hostgid X, allowing
  * him to do the chown.
  */
+// fork & exec lxc-usernsexec
 int chown_mapped_root(char *path, struct lxc_conf *conf)
 {
 	uid_t rootuid;
@@ -3874,6 +3884,7 @@ int chown_mapped_root(char *path, struct lxc_conf *conf)
 	unsigned long val;
 	char *chownpath = path;
 
+  // *val = map->hostid;
 	if (!get_mapped_rootid(conf, ID_TYPE_UID, &val)) {
 		ERROR("No uid mapping for container root");
 		return -1;
@@ -3904,6 +3915,8 @@ int chown_mapped_root(char *path, struct lxc_conf *conf)
 	}
 	path = chownpath;
 	if (geteuid() == 0) {
+    // int chown(const char *pathname, uid_t owner, gid_t group);
+    DEBUG("chown: path: %s, rootuid: %d, rootgid: %d", path, rootuid, rootgid);
 		if (chown(path, rootuid, rootgid) < 0) {
 			ERROR("Error chowning %s", path);
 			return -1;
@@ -3997,6 +4010,7 @@ int chown_mapped_root(char *path, struct lxc_conf *conf)
 		if (hostgid == sb.st_gid)
 			ret = execvp("lxc-usernsexec", args1);
 		else
+      // include map4
 			ret = execvp("lxc-usernsexec", args2);
 		SYSERROR("Failed executing usernsexec");
 		exit(1);

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -x
 
 #
 # lxc: linux Container library
@@ -39,6 +39,7 @@ SECURITY_MIRROR=${SECURITY_MIRROR:-http://security.debian.org/}
 LOCALSTATEDIR="@LOCALSTATEDIR@"
 LXC_TEMPLATE_CONFIG="@LXCTEMPLATECONFIG@"
 
+# configure_debian $rootfs $name
 configure_debian()
 {
     rootfs=$1
@@ -70,6 +71,7 @@ c1:12345:respawn:/sbin/getty 38400 tty1 linux
 c2:12345:respawn:/sbin/getty 38400 tty2 linux
 c3:12345:respawn:/sbin/getty 38400 tty3 linux
 c4:12345:respawn:/sbin/getty 38400 tty4 linux
+# when push [Ctrl] + [Alt] + [Del]
 p6::ctrlaltdel:/sbin/init 6
 p0::powerfail:/sbin/init 0
 EOF
@@ -117,6 +119,7 @@ EOF
     fi
 
     # remove pointless services in a container
+    # chroot [OPTION] NEWROOT [COMMAND [ARG]...]
     chroot $rootfs /usr/sbin/update-rc.d -f checkroot.sh disable
     chroot $rootfs /usr/sbin/update-rc.d -f umountfs disable
     chroot $rootfs /usr/sbin/update-rc.d -f hwclock.sh disable
@@ -239,6 +242,7 @@ cleanup()
 
 download_debian()
 {
+    # squeeze -> wezzy -> jessie -> stretch -> (buster)
     case "$release" in
       wheezy)
         init=sysvinit
@@ -249,6 +253,7 @@ download_debian()
         iproute=iproute2
         ;;
     esac
+    # when jessie, init and iproute2 is selected
     packages=\
 $init,\
 ifupdown,\
@@ -264,6 +269,8 @@ openssh-server
     arch=$2
     release=$3
 
+    # trap [-lp] [[arg] signal_spec ...]
+    # ARG is a command to be read and executed when the shell receives the signal(s) SIGNAL_SPEC.
     trap cleanup EXIT SIGHUP SIGINT SIGTERM
 
     # Create the cache
@@ -281,6 +288,8 @@ openssh-server
                 gpgkeyname="archive-key-8"
                 ;;
         esac
+        # --import : Import/merge  keys. This adds the given keys to the keyring.
+        # If the intent is to use the specified keyring alone, use --keyring along with --no-default-keyring.
         wget https://ftp-master.debian.org/keys/${gpgkeyname}.asc -O - --quiet \
             | gpg --import --no-default-keyring --keyring=${releasekeyring}
     fi
@@ -321,6 +330,9 @@ copy_debian()
     # make a local copy of the minidebian
     echo -n "Copying rootfs to $rootfs..."
     mkdir -p $rootfs
+    # --sparse --archive(-H: preserve hardlinks)
+    # -A, --acls: This option causes rsync to update the destination ACLs(Access Control List) to be the same as the source ACLs
+    # -X, --xattrs: This option causes rsync to update the remote extended attributes to be the same as the local ones.
     rsync -SHaAX "$cache/rootfs-$release-$arch"/ $rootfs/ || return 1
     return 0
 }
@@ -375,6 +387,7 @@ copy_configuration()
     # if there is exactly one veth network entry, make sure it has an
     # associated hwaddr.
     nics=`grep -e '^lxc\.network\.type[ \t]*=[ \t]*veth' $path/config | wc -l`
+    # optnssl rand -hex 3 => 7ae7ff
     if [ $nics -eq 1 ]; then
         grep -q "^lxc.network.hwaddr" $path/config || sed -i -e "/^lxc\.network\.type[ \t]*=[ \t]*veth/a lxc.network.hwaddr = 00:16:3e:$(openssl rand -hex 3| sed 's/\(..\)/\1:/g; s/.$//')" $path/config
     fi
@@ -394,6 +407,7 @@ copy_configuration()
     echo "# Container specific configuration" >> $path/config
     grep -q "^lxc.rootfs" $path/config 2> /dev/null || echo "lxc.rootfs = $rootfs" >> $path/config
 
+    # /usr/local/var/lib/lxc/debian01/config
     cat <<EOF >> $path/config
 lxc.mount = $path/fstab
 lxc.utsname = $hostname
@@ -408,6 +422,7 @@ EOF
     return 0
 }
 
+# post_process ${rootfs} ${release} ${arch} ${hostarch}
 post_process()
 {
     local rootfs="$1";  shift
@@ -573,6 +588,9 @@ if [ $hostarch = "powerpc" -a $arch != "powerpc" ]; then
     exit 1
 fi
 
+# sudo lxc-create -n debian02 -t debian
+# lxc-debian --path=/usr/local/var/lib/lxc/debian01 --name=debian01 --rootfs=/usr/local/var/lib/lxc/debian01/rootfs
+# debootstrap is /usr/sbin/debootstrap
 type debootstrap
 if [ $? -ne 0 ]; then
     echo "'debootstrap' command is missing"
@@ -608,6 +626,8 @@ if [ -z "$rootfs" ]; then
     fi
 fi
 
+# Checking cache download in /usr/local/var/cache/lxc/debian/rootfs-stable-amd64 ...
+# # Copying rootfs to /usr/local/var/lib/lxc/debian02/rootfs...
 install_debian $rootfs $release $arch
 if [ $? -ne 0 ]; then
     echo "failed to install debian"
@@ -620,6 +640,8 @@ if [ $? -ne 0 ]; then
     exit 1
 fi
 
+# write configuration on `/usr/local/var/lib/lxc/debian01/config`.
+## $path = /usr/local/var/lib/lxc/debian01
 copy_configuration $path $rootfs $name $arch
 if [ $? -ne 0 ]; then
     echo "failed write configuration file"

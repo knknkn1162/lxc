@@ -122,7 +122,9 @@ static int do_child(void *vargv)
 		perror("unshare CLONE_NEWNS");
 		return -1;
 	}
+  // Detect whether / is mounted MS_SHARED by checking /proc/self/mountinfo
 	if (detect_shared_rootfs()) {
+    // not propagate to parent namespace
 		if (mount(NULL, "/", NULL, MS_SLAVE|MS_REC, NULL)) {
 			printf("Failed to make / rslave");
 			return -1;
@@ -252,11 +254,25 @@ static int read_default_map(char *fnam, int which, char *username)
 
 static int find_default_map(void)
 {
+  // struct passwd *getpwuid(uid_t uid);
 	struct passwd *p = getpwuid(getuid());
+  /*
+    struct passwd {
+        char   *pw_name;       // username /
+        char   *pw_passwd;     // user password /
+        uid_t   pw_uid;        // user ID /
+        gid_t   pw_gid;        // group ID /
+        char   *pw_gecos;      // user information /
+        char   *pw_dir;        // home directory /
+        char   *pw_shell;      // shell program /
+    };
+  */
 	if (!p)
 		return -1;
+  // #define subuidfile "/etc/subuid"
 	if (read_default_map(subuidfile, ID_TYPE_UID, p->pw_name) < 0)
 		return -1;
+  // #define subgidfile "/etc/subgid"
 	if (read_default_map(subgidfile, ID_TYPE_GID, p->pw_name) < 0)
 		return -1;
     return 0;
@@ -319,6 +335,8 @@ int main(int argc, char *argv[])
 	if (argc < 1)
 		argv = default_args;
 
+  // pipe1[2] // child tells parent it has unshared
+  //  pipe2[2] // parent tells child it is mapped and may proceed
 	if (pipe(pipe1) < 0 || pipe(pipe2) < 0) {
 		perror("pipe");
 		exit(1);
@@ -328,10 +346,11 @@ int main(int argc, char *argv[])
 
 		close(pipe1[0]);
 		close(pipe2[1]);
-		opentty(ttyname0, 0);
-		opentty(ttyname1, 1);
-		opentty(ttyname2, 2);
+		opentty(ttyname0, 0); // /proc/self/fd/0
+		opentty(ttyname1, 1); // /proc/self/fd/1
+		opentty(ttyname2, 2); // /proc/self/fd/2
 
+    // 	unsigned long flags = CLONE_NEWUSER | CLONE_NEWNS;
 		ret = unshare(flags);
 		if (ret < 0) {
 			perror("unshare");
@@ -365,6 +384,7 @@ int main(int argc, char *argv[])
 
 	buf[0] = '1';
 
+  // static struct lxc_list active_map;
 	if (lxc_map_ids(&active_map, pid))
 		fprintf(stderr, "error mapping child\n");
 
