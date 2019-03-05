@@ -297,7 +297,6 @@ struct bdev_specs {
 	// c = lxc_container_new(my_args.name, my_args.lxcpath[0]);
   // 	struct bdev_specs spec; /* brief Specifications for how to create a new backing store */
   // c->create = static bool lxcapi_create(struct lxc_container *c, const char *t, const char *bdevtype, struct bdev_specs *specs, int flags, char *const argv[])
-
 	if (!c->create(c, my_args.template, my_args.bdevtype, &spec, flags, &argv[optind])) {
 		ERROR("Error creating container %s", c->name);
 		lxc_container_put(c);
