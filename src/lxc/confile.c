@@ -1402,6 +1402,7 @@ static int config_idmap(const char *key, const char *value, struct lxc_conf *lxc
 	if (ret != 4)
 		goto out;
 
+  // type u nsid 0 hostid 165536 range 65536 <= lxc.id_map = u 0 165536 65536
 	INFO("read uid map: type %c nsid %lu hostid %lu range %lu", type, nsid, hostid, range);
 	if (type == 'u')
 		idmap->idtype = ID_TYPE_UID;
@@ -1745,12 +1746,14 @@ static int parse_line(char *buffer, void *data)
 		}
 	}
 
+  // &config[i];
 	config = lxc_getconfig(key);
 	if (!config) {
 		ERROR("unknown key %s", key);
 		goto out;
 	}
 
+  // if unpriv, and define lxc.id_map is defined in default.conf, call config_idmap.
 	ret = config->cb(key, value, data);
 
 out:
@@ -1763,6 +1766,7 @@ static int lxc_config_readline(char *buffer, struct lxc_conf *conf)
 	return parse_line(buffer, conf);
 }
 
+// conf->rcfile is declared if necessary
 int lxc_config_read(const char *file, struct lxc_conf *conf)
 {
 	if( access(file, R_OK) == -1 ) {

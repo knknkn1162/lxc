@@ -2998,6 +2998,7 @@ static char *default_rootfs_mount = LXCROOTFSMOUNT;
 
 struct lxc_conf *lxc_conf_init(void)
 {
+  DEBUG("lxc_conf_init");
 	struct lxc_conf *new;
 	int i;
 
@@ -3630,12 +3631,14 @@ int lxc_map_ids(struct lxc_list *idmap, pid_t pid)
 	 * range by shadow.
 	 */
   // newuidmap - set the uid mapping of a user namespace
+  // /usr/bin/newuidmap
 	cmdpath = on_path("newuidmap");
 	if (cmdpath) {
 		use_shadow = 1;
 		free(cmdpath);
 	}
 
+  // use_shadow = 0
 	if (!use_shadow && geteuid()) {
 		ERROR("Missing newuidmap/newgidmap");
 		return -1;
@@ -3674,7 +3677,9 @@ int lxc_map_ids(struct lxc_list *idmap, pid_t pid)
 		if (!had_entry)
 			continue;
 
+    // use_shadow=0
 		if (!use_shadow) {
+      // write user namespace mapping in /proc/%d/%cid_map
 			ret = write_id_mapping(type, pid, buf, pos-buf);
 		} else {
 			left = 4096 - (pos - buf);
@@ -3683,6 +3688,7 @@ int lxc_map_ids(struct lxc_list *idmap, pid_t pid)
 				SYSERROR("snprintf failed, too many mappings");
 			pos += fill;
       // system() executes a command specified in command by calling /bin/sh -c command
+      DEBUG("use_shadow=1 => %s", buf);
 			ret = system(buf);
 		}
 
@@ -3878,6 +3884,7 @@ void lxc_delete_tty(struct lxc_tty_info *tty_info)
 // fork & exec lxc-usernsexec
 int chown_mapped_root(char *path, struct lxc_conf *conf)
 {
+  DEBUG("chown_mapped_root(%s), geteuid(): %d", path, geteuid());
 	uid_t rootuid;
 	gid_t rootgid;
 	pid_t pid;
@@ -3914,6 +3921,7 @@ int chown_mapped_root(char *path, struct lxc_conf *conf)
 		chownpath++;
 	}
 	path = chownpath;
+  // if non-priv, and set-uid bit is disable, geteuid() != 0.
 	if (geteuid() == 0) {
     // int chown(const char *pathname, uid_t owner, gid_t group);
     DEBUG("chown: path: %s, rootuid: %d, rootgid: %d", path, rootuid, rootgid);
@@ -4007,11 +4015,17 @@ int chown_mapped_root(char *path, struct lxc_conf *conf)
 			return -1;
 		}
 
-		if (hostgid == sb.st_gid)
+    int idx;
+    DEBUG("execvp");
+		if (hostgid == sb.st_gid) {
+      for(idx = 0; args1[idx] != NULL; idx++) { DEBUG("argv1[%d]: %s", idx, args1[idx]); }
 			ret = execvp("lxc-usernsexec", args1);
-		else
+    } else {
       // include map4
+      for(idx = 0; args2[idx] != NULL; idx++) { DEBUG("argv2[%d]: %s", idx, args2[idx]); }
 			ret = execvp("lxc-usernsexec", args2);
+    }
+    // never reaches
 		SYSERROR("Failed executing usernsexec");
 		exit(1);
 	}
@@ -4932,14 +4946,17 @@ void suggest_default_idmap(void)
 	char *uname, *gname;
 	size_t len = 0;
 
+  // getpwuid()
 	if (!(uname = getuname()))
 		return;
 
+  // getgrgid()
 	if (!(gname = getgname())) {
 		free(uname);
 		return;
 	}
 
+  // #define subuidfile "/etc/subuid"
 	f = fopen(subuidfile, "r");
 	if (!f) {
 		ERROR("Your system is not configured with subuids");
@@ -5009,6 +5026,7 @@ void suggest_default_idmap(void)
 	ERROR("You must either run as root, or define uid mappings");
 	ERROR("To pass uid mappings to lxc-create, you could create");
 	ERROR("~/.config/lxc/default.conf:");
+  // LXC_DEFAULT_CONFIG = /usr/local/etc/lxc/default.conf
 	ERROR("lxc.include = %s", LXC_DEFAULT_CONFIG);
 	ERROR("lxc.id_map = u 0 %u %u", uid, urange);
 	ERROR("lxc.id_map = g 0 %u %u", gid, grange);

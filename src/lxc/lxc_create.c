@@ -267,6 +267,7 @@ struct bdev_specs {
 		exit(1);
 	}
 
+  // [non_priv] load_config(c, (null) or /home/vagrant/.config/lxc/default.conf)
   DEBUG("load_config(c, %s or %s)", my_args.configfile, lxc_global_config_value("lxc.default_config"));
 	if (my_args.configfile)
     // load_config_locked(c, my_args.configfile);
@@ -282,6 +283,7 @@ struct bdev_specs {
       lxc.network.flags = up
       lxc.network.hwaddr = 00:16:3e:xx:xx:xx
      */
+    // load_config_locked: fname: /usr/local/etc/lxc/default.conf
 		c->load_config(c, lxc_global_config_value("lxc.default_config"));
 
 	if (my_args.fstype)
@@ -315,6 +317,7 @@ struct bdev_specs {
   // 	struct bdev_specs spec; /* brief Specifications for how to create a new backing store */
   // c->create = static bool lxcapi_create(struct lxc_container *c, const char *t, const char *bdevtype, struct bdev_specs *specs, int flags, char *const argv[])
   // use fork()
+  DEBUG("c->create");
 	if (!c->create(c, my_args.template, my_args.bdevtype, &spec, flags, &argv[optind])) {
 		ERROR("Error creating container %s", c->name);
 		lxc_container_put(c);

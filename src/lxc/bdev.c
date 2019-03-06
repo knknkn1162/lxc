@@ -3313,11 +3313,25 @@ err:
 static struct bdev * do_bdev_create(const char *dest, const char *type,
 			const char *cname, struct bdev_specs *specs)
 {
+  // bdev->ops = bdevs[i].ops;
+  // bdev->type = bdevs[i].name;
 	struct bdev *bdev = bdev_get(type);
 	if (!bdev) {
 		return NULL;
 	}
 
+  /*
+    static const struct bdev_ops btrfs_ops = {
+      .detect = &btrfs_detect,
+      .mount = &btrfs_mount,
+      .umount = &btrfs_umount,
+      .clone_paths = &btrfs_clonepaths,
+      .destroy = &btrfs_destroy,
+      .create = &btrfs_create,
+      .can_snapshot = true,
+      .can_backup = true,
+    };
+   */
 	if (bdev->ops->create(bdev, dest, cname, specs) < 0) {
 		 bdev_put(bdev);
 		 return NULL;

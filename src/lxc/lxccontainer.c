@@ -134,6 +134,7 @@ static int ongoing_create(struct lxc_container *c)
 
 	if (!file_exists(path))
 		return 0;
+  DEBUG("path: %s", path);
 	fd = open(path, O_RDWR);
 	if (fd < 0) {
 		// give benefit of the doubt
@@ -790,6 +791,9 @@ static int do_create_container_dir(const char *path, struct lxc_conf *conf)
 	}
 	strcpy(p, path);
   // fork & exec lxc-usernsexec
+  // lxc.id_map is empty, so the condition is false
+  // if unpriv, get lxc.id_map(struct id_map) & exec lxc-usernsexec. In this function, put -m option or /etc/sub{u,g}id in active_map and write to /proc/${child_pid}/{u,g}id_map
+  // // struct id_map { enum idtype idtype; unsigned long hostid, nsid, range; };
 	if (!lxc_list_empty(&conf->id_map) && chown_mapped_root(p, conf) != 0) {
 		ERROR("Failed to chown container dir");
 		ret = -1;
@@ -815,6 +819,8 @@ static bool create_container_dir(struct lxc_container *c)
 		free(s);
 		return false;
 	}
+  DEBUG("do_create_container_dir");
+  // chown_mapped_root
 	ret = do_create_container_dir(s, c->lxc_conf);
 	free(s);
 	return ret == 0;
@@ -827,6 +833,7 @@ static bool lxcapi_set_config_item(struct lxc_container *c, const char *key, con
  * do_bdev_create: thin wrapper around bdev_create().  Like bdev_create(),
  * it returns a mounted bdev on success, NULL on error.
  */
+// if nonroot, suggest_default_idmap() calls
 static struct bdev *do_bdev_create(struct lxc_container *c, const char *type,
 			 struct bdev_specs *specs)
 {
@@ -864,6 +871,13 @@ static struct bdev *do_bdev_create(struct lxc_container *c, const char *type,
 	if (geteuid() != 0 || (c->lxc_conf && !lxc_list_empty(&c->lxc_conf->id_map))) {
 		if (chown_mapped_root(bdev->dest, c->lxc_conf) < 0) {
 			ERROR("Error chowning %s to container root", bdev->dest);
+      // ERROR("You must either run as root, or define uid mappings");
+      // ERROR("To pass uid mappings to lxc-create, you could create");
+      // ERROR("~/.config/lxc/default.conf:");
+      // // LXC_DEFAULT_CONFIG = /usr/local/etc/lxc/default.conf
+      // ERROR("lxc.include = %s", LXC_DEFAULT_CONFIG);
+      // ERROR("lxc.id_map = u 0 %u %u", uid, urange);
+      // ERROR("lxc.id_map = g 0 %u %u", gid, grange);
 			suggest_default_idmap();
 			bdev_put(bdev);
 			return NULL;
@@ -1115,7 +1129,8 @@ static bool create_run_template(struct lxc_container *c, char *tpath, bool need_
     int idx;
 		/* execute */
     for(idx = 0; newargv[idx] != NULL; idx++) {
-      // /lxc-debian --path=/usr/local/var/lib/lxc/debian01 --name=debian01 --rootfs=/usr/local/var/lib/lxc/debian01/rootfs
+      // if priv..
+      // // lxc-debian --path=/usr/local/var/lib/lxc/debian01 --name=debian01 --rootfs=/usr/local/var/lib/lxc/debian01/rootfs
       DEBUG("newargv[%d]: %s", idx, newargv[idx]);
     }
     // int execvp(const char *file, char *const argv[]);
@@ -1134,6 +1149,8 @@ static bool create_run_template(struct lxc_container *c, char *tpath, bool need_
 }
 
 // write /usr/local/var/lib/lxc/debian01/config
+// prepend_lxc_header(c->configfile, tpath, argv)
+// read contents and prepend notations on this file
 static bool prepend_lxc_header(char *path, const char *t, char *const argv[])
 {
 	long flen;
@@ -1150,6 +1167,7 @@ static bool prepend_lxc_header(char *path, const char *t, char *const argv[])
 	if (f == NULL)
 		return false;
 
+  // int fseek(FILE *stream, long offset, int whence);
 	if (fseek(f, 0, SEEK_END) < 0)
 		goto out_error;
 	if ((flen = ftell(f)) < 0)
@@ -1299,6 +1317,9 @@ static bool lxcapi_create(struct lxc_container *c, const char *t,
   // do_create_container_dir -> chown_mapped_root
   // // <fork> -> <exec> lxc-usernsexec
   // // <fork> -> do_child -> exec(/bin/bash)
+  DEBUG("create_container_dir");
+  // conf->id_map is prepared in advance
+  // !lxc_list_empty(&conf->id_map) && chown_mapped_root(p, conf) != 0)
 	if (!create_container_dir(c))
 		goto free_tpath;
 
@@ -1308,6 +1329,7 @@ static bool lxcapi_create(struct lxc_container *c, const char *t,
 	 */
 	if (!c->lxc_conf->rootfs.path && !tpath) {
 		/* no template passed in and rootfs does not exist */
+    // c->save_config = lxcapi_save_config;
 		if (!c->save_config(c, NULL)) {
 			ERROR("failed to save starting configuration for %s\n", c->name);
 			goto out;
@@ -1351,6 +1373,9 @@ static bool lxcapi_create(struct lxc_container *c, const char *t,
 		struct bdev *bdev = NULL;
 
     // static struct bdev *do_bdev_create(struct lxc_container *c, const char *type, struct bdev_specs *specs)
+    // // 	bdev = bdev_create(dest, type, c->name, specs);
+    DEBUG("do_bdev_create");
+    // check chown_mapped_root(bdev->dest, c->lxc_conf) or ERROR
 		if (!(bdev = do_bdev_create(c, bdevtype, specs))) {
 			ERROR("Error creating backing store type %s for %s",
 				bdevtype ? bdevtype : "(none)", c->name);
@@ -1374,19 +1399,25 @@ static bool lxcapi_create(struct lxc_container *c, const char *t,
 	/* reload config to get the rootfs */
 	lxc_conf_free(c->lxc_conf);
 	c->lxc_conf = NULL;
+  // load_config_locked: fname: /usr/local/var/lib/lxc/debian01/config
 	if (!load_config_locked(c, c->configfile))
 		goto out_unlock;
 
   // tpath = get_template_path(t);
   // execvp(tpath, newargv); for child pid and its parent pid wait for child.
+  DEBUG("create_run_template");
+  // execute lxc-debian --path=/usr/local/var/lib/lxc/debian01 --name=debian01 --rootfs=/usr/local/var/lib/debian01/rootfs
+  // fork and exec lxc-** script and parent pid wait for child
 	if (!create_run_template(c, tpath, !!(flags & LXC_CREATE_QUIET), argv))
 		goto out_unlock;
 
 	// now clear out the lxc_conf we have, reload from the created
 	// container
+  // lxc_conf_free(c->lxc_conf);
 	lxcapi_clear_config(c);
 
 	if (t) {
+    // tpath is required only if HAVE_LIBGNUTLS is defined
 		if (!prepend_lxc_header(c->configfile, tpath, argv)) {
 			ERROR("Error prepending header to configuration file");
 			goto out_unlock;
@@ -1394,6 +1425,7 @@ static bool lxcapi_create(struct lxc_container *c, const char *t,
 	}
   // lxc_conf_init();
   // lxc_config_read(fname, c->lxc_conf)
+  // load_config_locked: fname: /usr/local/var/lib/lxc/debian01/config
 	ret = load_config_locked(c, c->configfile);
 
 out_unlock:
@@ -1863,8 +1895,10 @@ static int lxcapi_get_keys(struct lxc_container *c, const char *key, char *retv,
 	return ret;
 }
 
+// create_container_dir -> write_config(fout, c->lxc_conf);
 static bool lxcapi_save_config(struct lxc_container *c, const char *alt_file)
 {
+  DEBUG("lxcapi_save_config");
 	FILE *fout;
 	bool ret = false, need_disklock = false;
 	int lret;
@@ -1882,6 +1916,7 @@ static bool lxcapi_save_config(struct lxc_container *c, const char *alt_file)
 		}
 	}
 
+  // chown_mapped_root
 	if (!create_container_dir(c))
 		return false;
 
@@ -1905,6 +1940,7 @@ static bool lxcapi_save_config(struct lxc_container *c, const char *alt_file)
 	fout = fopen(alt_file, "w");
 	if (!fout)
 		goto out;
+  // alt_file=c->configfile
   // void write_config(FILE *fout, struct lxc_conf *c)
 	write_config(fout, c->lxc_conf);
 	fclose(fout);
@@ -3429,6 +3465,7 @@ struct lxc_container *lxc_container_new(const char *name, const char *configpath
 
   // lxcapi_load_config load c->lxc_conf on c->configfile
   // ret = load_config_locked(c, c->configfile);
+  // At the first time, c->configfile doesn't exist, so the function `lxcapi_load_config` is not executed
 	if (file_exists(c->configfile) && !lxcapi_load_config(c, NULL))
 		goto err;
 
@@ -3492,6 +3529,7 @@ struct lxc_container *lxc_container_new(const char *name, const char *configpath
 	c->remove_device_node = lxcapi_remove_device_node;
 
 	/* we'll allow the caller to update these later */
+  // lxc_log_init calls on lxc_create previously, so WARNing occurs
 	if (lxc_log_init(NULL, "none", NULL, "lxc_container", 0, c->config_path)) {
 		fprintf(stderr, "failed to open log\n");
 		goto err;

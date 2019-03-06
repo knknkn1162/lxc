@@ -130,8 +130,14 @@ static int do_child(void *vargv)
 			return -1;
 		}
 	}
+  int idx;
+  fprintf(stderr, "execvp:\n");
+  for(idx = 0; argv[idx] != NULL; idx++) { fprintf(stderr, "argv[%d]: %s\n", idx, argv[idx]); }
+  // chown 0:1000 /home/vagrant/.local/share/lxc/ubuntu01
+  // chown 0:1000 /home/vagrant/.local/share/lxc/ubuntu01/rootfs
+  // chown 0:1000 /home/vagrant/.local/share/lxc/ubuntu01
 	execvp(argv[0], argv);
-	perror("execvpe");
+	perror("execvpe"); // never reaches
 	return -1;
 }
 
@@ -278,6 +284,7 @@ static int find_default_map(void)
     return 0;
 }
 
+// put -m option or /etc/sub{u,g}id in active_map and write to /proc/${child_pid}/{u,g}id_map
 int main(int argc, char *argv[])
 {
 	int c;
@@ -316,6 +323,7 @@ int main(int argc, char *argv[])
 
 	while ((c = getopt(argc, argv, "m:h")) != EOF) {
 		switch (c) {
+      // lxc_list_add_tail(&active_map, tmp);
 			case 'm': if (parse_map(optarg)) usage(argv[0]); break;
 			case 'h':
 			default:
@@ -323,7 +331,9 @@ int main(int argc, char *argv[])
 		}
 	};
 
+  // if -m option is used, skip
 	if (lxc_list_empty(&active_map)) {
+    // read_default_map -> lxc_list_add_tail(&active_map, tmp);
 		if (find_default_map()) {
 			fprintf(stderr, "You have no allocated subuids or subgids\n");
 			exit(1);
@@ -372,6 +382,7 @@ int main(int argc, char *argv[])
 
 		close(pipe1[1]);
 		close(pipe2[0]);
+    // execvp
 		return do_child((void*)argv);
 	}
 
@@ -385,6 +396,7 @@ int main(int argc, char *argv[])
 	buf[0] = '1';
 
   // static struct lxc_list active_map;
+  // use newuidmap command or write user namespace mapping in /proc/%d/%cid_map
 	if (lxc_map_ids(&active_map, pid))
 		fprintf(stderr, "error mapping child\n");
 
