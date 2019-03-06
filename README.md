@@ -47,6 +47,7 @@ See https://gist.github.com/knknkn1162/51aebbc74e55745e7fb7ce247ac70d5f
 
 ### unprivileged user
 
+See https://gist.github.com/knknkn1162/868bd8a2428cc4291240eebcdd0fe20f
 
 [![LXD](https://linuxcontainers.org/static/img/containers.png)](https://linuxcontainers.org/lxd)
 
