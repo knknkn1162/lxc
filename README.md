@@ -43,7 +43,7 @@ $ sudo make install
 
 ### privileged user
 
-See https://gist.github.com/knknkn1162/51aebbc74e55745e7fb7ce247ac70d5f
+See https://gist.github.com/knknkn1162/00590cc566269bf8edfdfb39a29016b9
 
 ### unprivileged user
 
