@@ -101,11 +101,15 @@ EOF
     # reconfigure some services
 
     # but first reconfigure locales - so we get no noisy perl-warnings
+    ## true
     if [ -z "$LANG" ] || echo $LANG | grep -E -q "^C(\..+)*$"; then
         cat >> $rootfs/etc/locale.gen << EOF
 en_US.UTF-8 UTF-8
 EOF
         chroot $rootfs locale-gen en_US.UTF-8 UTF-8
+        # Generating locales (this might take a while)...
+        # en_US.UTF-8... done
+        # Generation complete.
         chroot $rootfs update-locale LANG=en_US.UTF-8
     else
         encoding=$(echo $LANG | cut -d. -f2)
@@ -120,13 +124,18 @@ EOF
 
     # remove pointless services in a container
     # chroot [OPTION] NEWROOT [COMMAND [ARG]...]
+    # update-rc.d: error: cannot find a LSB script for checkroot.sh
     chroot $rootfs /usr/sbin/update-rc.d -f checkroot.sh disable
+    # update-rc.d: error: cannot find a LSB script for umountfs
     chroot $rootfs /usr/sbin/update-rc.d -f umountfs disable
     chroot $rootfs /usr/sbin/update-rc.d -f hwclock.sh disable
+    # update-rc.d: error: cannot find a LSB script for hwclockfirst.sh
     chroot $rootfs /usr/sbin/update-rc.d -f hwclockfirst.sh disable
 
     # generate new SSH keys
     if [ -x $rootfs/var/lib/dpkg/info/openssh-server.postinst ]; then
+        # Most Debian systems will not have this script as the need for a policy layer is not very common. Most people using chroot jails just need an one-line script which returns an exit status of 101 as the jailed /usr/sbin/policy-rc.d script.
+        # For details, see https://people.debian.org/~hmh/invokerc.d-policyrc.d-specification.txt
         cat > $rootfs/usr/sbin/policy-rc.d << EOF
 #!/bin/sh
 exit 101
@@ -137,9 +146,19 @@ EOF
             mv $rootfs/etc/init/ssh.conf $rootfs/etc/init/ssh.conf.disabled
         fi
 
+        # rm -f /usr/local/var/lib/lxc/debian01/rootfs/etc/ssh/ssh_host_ecdsa_key /usr/local/var/lib/lxc/debian01/rootfs/etc/ssh/ssh_host_ecdsa_key.pub /usr/local/var/lib/lxc/debian01/rootfs/etc/ssh/ssh_host_ed25519_key /usr/local/var/lib/lxc/debian01/rootfs/etc/ssh/ssh_host_ed25519_key.pub /usr/local/var/lib/lxc/debian01/rootfs/etc/ssh/ssh_host_rsa_key /usr/local/var/lib/lxc/debian01/rootfs/etc/ssh/ssh_host_rsa_key.pub
         rm -f $rootfs/etc/ssh/ssh_host_*key*
 
+        # Creating SSH2 RSA key; this may take some time ...
+        # 2048 SHA256:XNonFauNgOI3aY9Nv4D//W1QXBP/kseqX0tJ4AaJ1jI root@ubuntu-bionic (RSA)
+        # Creating SSH2 ECDSA key; this may take some time ...
+        # 256 SHA256:rWXJQMhyvwU2pW3FMDRkj5eY2LGN/jYC68Mz8i7SVnA root@ubuntu-bionic (ECDSA)
+        # Creating SSH2 ED25519 key; this may take some time ...
+        # 256 SHA256:l1y4BiOCcgm7czU3tE+WAi2j1SUYURgJKs172wR6Owk root@ubuntu-bionic (ED25519)
+        # invoke-rc.d: could not determine current runlevel
+        # invoke-rc.d: policy-rc.d denied execution of start.
         DPKG_MAINTSCRIPT_PACKAGE=openssh DPKG_MAINTSCRIPT_NAME=postinst chroot $rootfs /var/lib/dpkg/info/openssh-server.postinst configure
+
         sed -i "s/root@$(hostname)/root@$hostname/g" $rootfs/etc/ssh/ssh_host_*.pub
 
         if [ -f "$rootfs/etc/init/ssh.conf.disabled" ]; then
@@ -150,8 +169,13 @@ EOF
     fi
 
     # set initial timezone as on host
-    if [ -f /etc/timezone ]; then
+    if [ -f /etc/timezone ]; then # yes
         cat /etc/timezone > $rootfs/etc/timezone
+
+        # + chroot /usr/local/var/lib/lxc/debian01/rootfs dpkg-reconfigure -f noninteractive tzdata
+        # Current default time zone: 'Etc/UTC'
+        # Local time is now:      Thu Mar  7 00:36:29 UTC 2019.
+        # Universal Time is now:  Thu Mar  7 00:36:29 UTC 2019.
         chroot $rootfs dpkg-reconfigure -f noninteractive tzdata
     elif [ -f /etc/sysconfig/clock ]; then
         . /etc/sysconfig/clock
@@ -194,7 +218,10 @@ configure_debian_systemd()
     path=$1
     rootfs=$2
 
+    # chroot /usr/local/var/lib/lxc/debian01/rootfs dpkg-query --search /sbin/init
+    ## dpkg-query is a tool to show information about packages listed in the dpkg database.
     init="$(chroot ${rootfs} dpkg-query --search /sbin/init | cut -d : -f 1)"
+    # init=systemd-sysv
     if [ "$init" = "systemd-sysv" ]; then
        # only appropriate when systemd is PID 1
        echo 'lxc.autodev = 1' >> "$path/config"
@@ -228,6 +255,7 @@ configure_debian_systemd()
     chroot ${rootfs} ln -s /lib/systemd/system/halt.target /etc/systemd/system/sigpwr.target
     # Setup getty service on the 4 ttys we are going to allow in the
     # default config.  Number should match lxc.tty
+    # ln -sf ../getty@.service getty@tty{$i}.service
     ( cd ${rootfs}/etc/systemd/system/getty.target.wants
         for i in 1 2 3 4 ; do ln -sf ../getty\@.service getty@tty${i}.service; done )
 
@@ -360,6 +388,7 @@ install_debian()
             fi
         fi
 
+        # rsync -SHaAX /usr/local/var/cache/lxc/debian/rootfs-stable-amd64/ /usr/local/var/lib/lxc/debian01/rootfs/
         copy_debian $cache $arch $rootfs $release
         if [ $? -ne 0 ]; then
             echo "Failed to copy rootfs"
@@ -389,13 +418,17 @@ copy_configuration()
     nics=`grep -e '^lxc\.network\.type[ \t]*=[ \t]*veth' $path/config | wc -l`
     # optnssl rand -hex 3 => 7ae7ff
     if [ $nics -eq 1 ]; then
+        # lxc.network.hwaddr = 00:16:3e:xx:xx:xx -> lxc.network.hwaddr = 00:16:3e:98:0d:2d
         grep -q "^lxc.network.hwaddr" $path/config || sed -i -e "/^lxc\.network\.type[ \t]*=[ \t]*veth/a lxc.network.hwaddr = 00:16:3e:$(openssl rand -hex 3| sed 's/\(..\)/\1:/g; s/.$//')" $path/config
     fi
 
     ## Add all the includes
     echo "" >> $path/config
     echo "# Common configuration" >> $path/config
+    # lxc.include = /usr/local/share/lxc/config/debian.common.conf
+    # /usr/local/share/lxc/config is expanded from ./config/templates
     if [ -e "${LXC_TEMPLATE_CONFIG}/debian.common.conf" ]; then
+        # lxc.include = /usr/local/share/lxc/config/debian.common.conf
         echo "lxc.include = ${LXC_TEMPLATE_CONFIG}/debian.common.conf" >> $path/config
     fi
     if [ -e "${LXC_TEMPLATE_CONFIG}/debian.${release}.conf" ]; then
@@ -407,7 +440,7 @@ copy_configuration()
     echo "# Container specific configuration" >> $path/config
     grep -q "^lxc.rootfs" $path/config 2> /dev/null || echo "lxc.rootfs = $rootfs" >> $path/config
 
-    # /usr/local/var/lib/lxc/debian01/config
+    # lxc.mount = /usr/local/var/lib/lxc/debian01/fstab
     cat <<EOF >> $path/config
 lxc.mount = $path/fstab
 lxc.utsname = $hostname
@@ -468,6 +501,11 @@ clean()
     fi
 
     # lock, so we won't purge while someone is creating a repository
+    # (
+    #   flock -n 9 || exit 1
+    #   # ... commands executed under lock ...
+    # ) 9>/var/lock/mylockfile
+    # The form is convenient inside shell scripts.  The mode used to open the file doesn't matter to flock; using > or >> allows the lockfile to be created if it does  not  already  exist,  however,  write  permission  is required.  Using < requires that the file already exists but only read permission is required.
     (
         flock -x 9
         if [ $? != 0 ]; then
