@@ -109,7 +109,7 @@ void cgm_unlock(void)
 __attribute__((constructor))
 static void process_lock_setup_atfork(void)
 {
-  fprintf("static void process_lock_setup_atfork(void) : constructor HAVE_PTHREAD_ATFORK\n");
+  fprintf(stderr, "static void process_lock_setup_atfork(void) : constructor HAVE_PTHREAD_ATFORK\n");
 	pthread_atfork(cgm_lock, cgm_unlock, cgm_unlock);
 }
 #endif
