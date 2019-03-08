@@ -152,12 +152,13 @@ extern struct nlmsg *nlmsg_alloc_reserve(size_t size)
 {
 	struct nlmsg *nlmsg;
 
+  // 	nlmsg->cap = len; which is size_t len = NLMSG_HDRLEN + NLMSG_ALIGN(size);
 	nlmsg = nlmsg_alloc(size);
 	if (!nlmsg)
 		return NULL;
 
 	// just set message length to cap directly
-	nlmsg->nlmsghdr->nlmsg_len = nlmsg->cap;
+	nlmsg->nlmsghdr->nlmsg_len = nlmsg->cap; // capacity of the netlink message, this is the initially allocated size
 	return nlmsg;
 }
 

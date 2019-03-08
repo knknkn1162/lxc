@@ -44,6 +44,8 @@ extern struct lsm_drv *lsm_nop_drv_init(void);
 __attribute__((constructor))
 void lsm_init(void)
 {
+  
+  fprintf(stderr, "lsm_init : constructor\n");
 	if (drv) {
 		INFO("LSM security driver %s", drv->name);
 		return;

@@ -656,6 +656,18 @@ static int parse_config_v2(FILE *f, char *line, struct lxc_conf *conf)
  * the directives must include 'whitelist'(version == 1 or 2) or 'blacklist'
  * (version == 2) and can include 'debug' (though debug is not yet supported).
  */
+/* example
+$ cat /usr/local/share/lxc/config/common.seccomp
+2
+blacklist
+reject_force_umount  # comment this to allow umount -f;  not recommended
+[all]
+kexec_load errno 1
+open_by_handle_at errno 1
+init_module errno 1
+finit_module errno 1
+delete_module errno 1
+ */
 static int parse_config(FILE *f, struct lxc_conf *conf)
 {
 	char line[1024];
@@ -682,6 +694,7 @@ static int parse_config(FILE *f, struct lxc_conf *conf)
 
 	if (version == 1)
 		return parse_config_v1(f, conf);
+  // this is version 2
 	return parse_config_v2(f, line, conf);
 }
 
@@ -709,6 +722,7 @@ static bool use_seccomp(void)
 			ret = sscanf(line + 8, "%d", &v);
 			if (ret == 1 && v != 0)
 				already_enabled = true;
+        // else Seccomp:	0
 			break;
 		}
 	}
@@ -734,10 +748,13 @@ int lxc_read_seccomp_config(struct lxc_conf *conf)
 	if (!conf->seccomp)
 		return 0;
 
+  // check /proc/self/status to see Seccomp line.
 	if (!use_seccomp())
 		return 0;
 #if HAVE_SCMP_FILTER_CTX
 	/* XXX for debug, pass in SCMP_ACT_TRAP */
+  // SCMP_ACT_TRAP: The thread will be sent a SIGSYS signal when it calls a syscall that does not match any of the configured seccomp filter rules.
+  // SCMP_ACT_KILL: The thread will be terminated by the kernel with SIGSYS when it calls a syscall that does not match any of the configured seccomp filter rules. 
 	conf->seccomp_ctx = seccomp_init(SCMP_ACT_KILL);
 	ret = !conf->seccomp_ctx;
 #else
@@ -750,9 +767,12 @@ int lxc_read_seccomp_config(struct lxc_conf *conf)
 
 /* turn off no-new-privs.  We don't want it in lxc, and it breaks
  * with apparmor */
+// # HAVE_SCMP_FILTER_CTX=1 will tell us we have libseccomp api >= 1.0.0
 #if HAVE_SCMP_FILTER_CTX
 	check_seccomp_attr_set = seccomp_attr_set(conf->seccomp_ctx, SCMP_FLTATR_CTL_NNP, 0);
 #else
+  // A flag to specify if the NO_NEW_PRIVS functionality should be enabled before loading the seccomp filter into the kernel.
+  // With no_new_privs set, execve promises not to grant the privilege to do anything that could not have been done without the execve call.
 	check_seccomp_attr_set = seccomp_attr_set(SCMP_FLTATR_CTL_NNP, 0);
 #endif
 	if (check_seccomp_attr_set) {
@@ -760,11 +780,13 @@ int lxc_read_seccomp_config(struct lxc_conf *conf)
 		return -1;
 	}
 #ifdef SCMP_FLTATR_ATL_TSKIP
+  // A flag to specify if libseccomp should allow filter rules to be created for the -1 syscall.
 	if (seccomp_attr_set(conf->seccomp_ctx, SCMP_FLTATR_ATL_TSKIP, 1)) {
 		WARN("Failed to turn on seccomp nop-skip, continuing");
 	}
 #endif
 
+  DEBUG("seccomp file: %s", conf->seccomp);
 	f = fopen(conf->seccomp, "r");
 	if (!f) {
 		SYSERROR("Failed to open seccomp policy file %s.", conf->seccomp);

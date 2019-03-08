@@ -60,13 +60,16 @@ typedef void (*sighandler_t)(int);
 __attribute__((constructor))
 void lxc_console_init(void)
 {
+  fprintf(stderr, "void lxc_console_init(void)\n");
 	lxc_list_init(&lxc_ttys);
 }
 
+// 	lxc_console_winsz(console->peer, console->master);
 void lxc_console_winsz(int srcfd, int dstfd)
 {
 	struct winsize wsz;
 	if (isatty(srcfd) && ioctl(srcfd, TIOCGWINSZ, &wsz) == 0) {
+    // set winsz dstfd:14 cols:115 rows:30
 		DEBUG("set winsz dstfd:%d cols:%d rows:%d", dstfd,
 		      wsz.ws_col, wsz.ws_row);
 		ioctl(dstfd, TIOCSWINSZ, &wsz);
@@ -107,6 +110,7 @@ int lxc_console_cb_sigwinch_fd(int fd, uint32_t events, void *cbdata,
 	return 0;
 }
 
+// 	ts = lxc_console_sigwinch_init(console->peer, console->master);
 struct lxc_tty_state *lxc_console_sigwinch_init(int srcfd, int dstfd)
 {
 	sigset_t mask;
@@ -139,6 +143,7 @@ struct lxc_tty_state *lxc_console_sigwinch_init(int srcfd, int dstfd)
 		return ts;
 	}
 
+  // The  mask argument specifies the set of signals that the caller wishes to accept
 	ts->sigfd = signalfd(-1, &mask, SFD_CLOEXEC);
 	if (ts->sigfd < 0) {
 		SYSERROR("failed to create signal fd");
@@ -148,6 +153,7 @@ struct lxc_tty_state *lxc_console_sigwinch_init(int srcfd, int dstfd)
 		return ts;
 	}
 
+  // process 30833 created signal fd 17 to handle SIGWINCH events
 	DEBUG("process %d created signal fd %d to handle SIGWINCH events", getpid(), ts->sigfd);
 	return ts;
 }
@@ -452,6 +458,7 @@ static void lxc_console_peer_default(struct lxc_console *console)
 	if (!path)
 		goto out;
 
+  // opening /dev/tty for console peer (if no daemonize)
 	DEBUG("opening %s for console peer", path);
 	console->peer = lxc_unpriv(open(path, O_CLOEXEC | O_RDWR | O_CREAT |
 					O_APPEND, 0600));
@@ -463,6 +470,20 @@ static void lxc_console_peer_default(struct lxc_console *console)
 	if (!isatty(console->peer))
 		goto err1;
 
+  /*
+  struct lxc_tty_state
+  {
+    struct lxc_list node;
+    int stdinfd;
+    int stdoutfd;
+    int masterfd;
+    int escape;
+    const char *winch_proxy;
+    const char *winch_proxy_lxcpath;
+    int sigfd;
+    sigset_t oldmask;
+  };
+ */
 	ts = lxc_console_sigwinch_init(console->peer, console->master);
 	console->tty_state = ts;
 	if (!ts) {
@@ -478,6 +499,7 @@ static void lxc_console_peer_default(struct lxc_console *console)
 		goto err1;
 	}
 
+  // tcgetattr and tcsetattr
 	if (lxc_setup_tios(console->peer, console->tios) < 0)
 		goto err2;
 
@@ -549,8 +571,10 @@ int lxc_console_create(struct lxc_conf *conf)
 		goto err;
 	}
 
+  // 	console->peer = lxc_unpriv(open(path, O_CLOEXEC | O_RDWR | O_CREAT | O_APPEND, 0600));
 	lxc_console_peer_default(console);
 
+  // --console-log=FILE Log container console output to FILE?
 	if (console->log_path) {
 		console->log_fd = lxc_unpriv(open(console->log_path,
 						  O_CLOEXEC | O_RDWR |

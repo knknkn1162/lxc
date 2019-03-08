@@ -20,6 +20,7 @@
  * License along with this library; if not, write to the Free Software
  * Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA
  */
+// cgmanagerは，D-Busを経由でcgroupに関する操作を受け付けcgroupを操作するデーモン
 #include "config.h"
 
 #include <stdio.h>
@@ -108,6 +109,7 @@ void cgm_unlock(void)
 __attribute__((constructor))
 static void process_lock_setup_atfork(void)
 {
+  fprintf("static void process_lock_setup_atfork(void) : constructor HAVE_PTHREAD_ATFORK\n");
 	pthread_atfork(cgm_lock, cgm_unlock, cgm_unlock);
 }
 #endif
@@ -228,6 +230,22 @@ static void check_supports_multiple_controllers(pid_t pid)
 
 	cgm_all_controllers_same = true;
 
+/*
+$ cat /proc/self/cgroup
+12:devices:/user.slice
+11:freezer:/
+10:rdma:/
+9:pids:/user.slice/user-1000.slice/session-30.scope
+8:net_cls,net_prio:/
+7:hugetlb:/
+6:cpuset:/
+5:cpu,cpuacct:/user.slice
+4:memory:/user.slice
+3:perf_event:/
+2:blkio:/user.slice
+1:name=systemd:/user.slice/user-1000.slice/session-30.scope
+0::/user.slice/user-1000.slice/session-30.scope
+ */
 	while (getline(&line, &sz, f) != -1) {
 		/* file format: hierarchy:subsystems:group */
 		char *colon;
@@ -1303,6 +1321,26 @@ struct cgroup_ops *cgm_ops_init(void)
 		goto err2;
 	cgm_dbus_disconnect();
 
+/*
+static struct cgroup_ops cgmanager_ops = {
+	.init = cgm_init,
+	.destroy = cgm_destroy,
+	.create = cgm_create,
+	.enter = cgm_enter,
+	.create_legacy = NULL,
+	.get_cgroup = cgm_get_cgroup,
+	.get = cgm_get,
+	.set = cgm_set,
+	.unfreeze = cgm_unfreeze,
+	.setup_limits = cgm_setup_limits,
+	.name = "cgmanager",
+	.chown = cgm_chown,
+	.attach = cgm_attach,
+	.mount_cgroup = cgm_mount_cgroup,
+	.nrtasks = cgm_get_nrtasks,
+	.disconnect = NULL,
+};
+ */
 	return &cgmanager_ops;
 
 err2:

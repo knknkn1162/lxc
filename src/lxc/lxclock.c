@@ -46,6 +46,11 @@
 
 lxc_log_define(lxc_lock, lxc);
 
+/*
+AC_ARG_ENABLE([mutex-debugging],
+	[AC_HELP_STRING([--enable-mutex-debugging], [Makes mutexes to report error and provide stack trace [default=no]])],
+	[], [enable_mutex_debugging=no])
+ */
 #ifdef MUTEX_DEBUGGING
 static pthread_mutex_t thread_mutex = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
 
@@ -360,6 +365,7 @@ void process_unlock(void)
 __attribute__((constructor))
 static void process_lock_setup_atfork(void)
 {
+  fprintf(stderr, "process_lock_setup_atfork(void) : constructor HAVE_PTHREAD_ATFORK\n");
 	pthread_atfork(process_lock, process_unlock, process_unlock);
 }
 #endif

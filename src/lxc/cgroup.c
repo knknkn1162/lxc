@@ -33,22 +33,30 @@ static struct cgroup_ops *ops = NULL;
 extern struct cgroup_ops *cgfs_ops_init(void);
 extern struct cgroup_ops *cgm_ops_init(void);
 
+// call before main
 __attribute__((constructor))
 void cgroup_ops_init(void)
 {
+  fprintf(stderr, "cgroup_ops_init : constructor\n");
 	if (ops) {
+    fprintf(stderr, "cgroup driver %s\n", ops->name);
 		INFO("cgroup driver %s", ops->name);
 		return;
 	}
 
+  fprintf(stderr, "cgroup_init\n");
 	DEBUG("cgroup_init");
 	#if HAVE_CGMANAGER
+  // We check whether we can talk to cgmanager, escape to root cgroup if we are root, then close the connection.
 	ops = cgm_ops_init();
+  fprintf(stderr, "cgm_ops_init");
 	#endif
 	if (!ops)
 		ops = cgfs_ops_init();
-	if (ops)
+	if (ops) {
 		INFO("Initialized cgroup driver %s", ops->name);
+    fprintf(stderr, "Initialized cgroup driver %s\n", ops->name);
+  }
 }
 
 bool cgroup_init(struct lxc_handler *handler)
@@ -59,7 +67,9 @@ bool cgroup_init(struct lxc_handler *handler)
 	}
 
 	if (ops) {
+    // cgroup.c:cgroup_init:62 - cgroup driver cgroupfs initing for debian01
 		INFO("cgroup driver %s initing for %s", ops->name, handler->name);
+    // ops->init is `cgm_init`
 		handler->cgroup_data = ops->init(handler->name);
 	}
 	return handler->cgroup_data != NULL;
@@ -94,6 +104,7 @@ bool cgroup_enter(struct lxc_handler *handler)
 
 bool cgroup_create_legacy(struct lxc_handler *handler)
 {
+  // ops->create_legacy = NULL
 	if (ops && ops->create_legacy)
 		return ops->create_legacy(handler->cgroup_data, handler->pid);
 	return true;

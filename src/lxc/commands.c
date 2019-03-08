@@ -121,6 +121,7 @@ static int fill_sock_name(char *path, int len, const char *lxcname,
 		return -1;
 	}
 	hash = fnv_64a_buf(tmppath, ret, FNV1A_64_INIT);
+  // path = lxc/**/command
 	ret = snprintf(path, len, "lxc/%016" PRIx64 "/command", hash);
 	if (ret < 0 || ret >= len) {
 		ERROR("Command socket name too long");
@@ -278,6 +279,21 @@ static int lxc_cmd_rsp_send(int fd, struct lxc_cmd_rsp *rsp)
  * then free the slot with lxc_cmd_fd_cleanup(). The socket fd will be
  * returned in the cmd response structure.
  */
+/*
+typedef enum {
+	LXC_CMD_CONSOLE,
+	LXC_CMD_CONSOLE_WINCH,
+	LXC_CMD_STOP,
+	LXC_CMD_GET_STATE,
+	LXC_CMD_GET_INIT_PID,
+	LXC_CMD_GET_CLONE_FLAGS,
+	LXC_CMD_GET_CGROUP,
+	LXC_CMD_GET_CONFIG_ITEM,
+	LXC_CMD_GET_NAME,
+	LXC_CMD_GET_LXCPATH,
+	LXC_CMD_MAX,
+} lxc_cmd_t;
+ */
 static int lxc_cmd(const char *name, struct lxc_cmd_rr *cmd, int *stopped,
 		   const char *lxcpath, const char *hashed_sock_name)
 {
@@ -285,6 +301,7 @@ static int lxc_cmd(const char *name, struct lxc_cmd_rr *cmd, int *stopped,
 	char path[sizeof(((struct sockaddr_un *)0)->sun_path)] = { 0 };
 	char *offset = &path[1];
 	size_t len;
+  // For this command the fd cannot be closed because it is used as a placeholder to indicate that a particular tty slot is in use.
 	int stay_connected = cmd->req.cmd == LXC_CMD_CONSOLE;
 
 	*stopped = 0;
@@ -308,11 +325,24 @@ static int lxc_cmd(const char *name, struct lxc_cmd_rr *cmd, int *stopped,
 		return -1;
 	}
 
+  // int lxc_abstract_unix_send_credential(int fd, void *data, size_t size)
 	ret = lxc_abstract_unix_send_credential(sock, &cmd->req, sizeof(cmd->req));
 	if (ret != sizeof(cmd->req)) {
 		if (errno == EPIPE)
 			goto epipe;
 		SYSERROR("Command %s failed to send req to \"@%s\" %d.",
+	// static const char * const cmdname[LXC_CMD_MAX] = {
+	// 	[LXC_CMD_CONSOLE]         = "console",
+	// 	[LXC_CMD_CONSOLE_WINCH]   = "console_winch",
+	// 	[LXC_CMD_STOP]            = "stop",
+	// 	[LXC_CMD_GET_STATE]       = "get_state",
+	// 	[LXC_CMD_GET_INIT_PID]    = "get_init_pid",
+	// 	[LXC_CMD_GET_CLONE_FLAGS] = "get_clone_flags",
+	// 	[LXC_CMD_GET_CGROUP]      = "get_cgroup",
+	// 	[LXC_CMD_GET_CONFIG_ITEM] = "get_config_item",
+	// 	[LXC_CMD_GET_NAME]        = "get_name",
+	// 	[LXC_CMD_GET_LXCPATH]     = "get_lxcpath",
+	// };
 			 lxc_cmd_str(cmd->req.cmd), offset, ret);
 		if (ret >=0)
 			ret = -1;
@@ -320,6 +350,7 @@ static int lxc_cmd(const char *name, struct lxc_cmd_rr *cmd, int *stopped,
 	}
 
 	if (cmd->req.datalen > 0) {
+    // MSG_NOSIGNAL: Don't generate a SIGPIPE signal if the peer on a stream-oriented socket has closed the connection.
 		ret = send(sock, cmd->req.data, cmd->req.datalen, MSG_NOSIGNAL);
 		if (ret != cmd->req.datalen) {
 			if (errno == EPIPE)
@@ -390,14 +421,25 @@ int lxc_try_cmd(const char *name, const char *lxcpath)
 pid_t lxc_cmd_get_init_pid(const char *name, const char *lxcpath)
 {
 	int ret, stopped;
+/*
+struct lxc_cmd_req { lxc_cmd_t cmd; int datalen; const void *data; };
+struct lxc_cmd_rsp { int ret; int datalen; void *data; };
+struct lxc_cmd_rr { struct lxc_cmd_req req; struct lxc_cmd_rsp rsp; };
+ */
 	struct lxc_cmd_rr cmd = {
 		.req = { .cmd = LXC_CMD_GET_INIT_PID },
 	};
 
+  // Connect to the specified running container, send it a command request and collect the response
+  // static int lxc_cmd(const char *name, struct lxc_cmd_rr *cmd, int *stopped, const char *lxcpath, const char *hashed_sock_name)
+  // lxc_abstract_unix_send_credential(sock, &cmd->req, sizeof(cmd->req));
+  // send(sock, cmd->req.data, cmd->req.datalen, MSG_NOSIGNAL);
+  // 	ret = lxc_cmd_rsp_recv(sock, cmd);
 	ret = lxc_cmd(name, &cmd, &stopped, lxcpath, NULL);
 	if (ret < 0)
 		return ret;
 
+  // #define PTR_TO_INT(p) ((int) (long) (p))
 	return PTR_TO_INT(cmd.rsp.data);
 }
 
@@ -979,6 +1021,7 @@ out_close:
 	goto out;
 }
 
+// fd = lxc_abstract_unix_open(path, SOCK_STREAM, 0); with FD_CLOEXEC
 int lxc_cmd_init(const char *name, struct lxc_handler *handler,
 		 const char *lxcpath)
 {

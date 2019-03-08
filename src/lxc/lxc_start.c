@@ -99,12 +99,16 @@ static int pid_from_lxcname(const char *lxcname_or_pid, const char *lxcpath) {
 			return -1;
 		}
 
+    // 	c->may_control = lxcapi_may_control;
+    // if lxc_try_cmd(c->name, c->config_path) != 0; <= if cmd.rsp.ret < 0
 		if (!s->may_control(s)) {
 			SYSERROR("Insufficient privileges to control container '%s'", s->name);
 			lxc_container_put(s);
 			return -1;
 		}
 
+    // c->init_pid = lxcapi_init_pid;
+    // // lxc_cmd_get_init_pid(c->name, c->config_path); <= PTR_TO_INT(cmd.rsp.data);
 		pid = s->init_pid(s);
 		if (pid < 1) {
 			SYSERROR("Is container '%s' running?", s->name);
@@ -208,6 +212,7 @@ int main(int argc, char *argv[])
 	};
 	struct lxc_container *c;
 
+  // static struct lxc_list defines;
 	lxc_list_init(&defines);
 
 	if (lxc_caps_init())
@@ -236,6 +241,7 @@ int main(int argc, char *argv[])
 	 */
 	/* rcfile is specified in the cli option */
 	if (my_args.rcfile) {
+    // rcfile from random path specified in cli option
 		rcfile = (char *)my_args.rcfile;
 		c = lxc_container_new(my_args.name, lxcpath);
 		if (!c) {
@@ -249,13 +255,15 @@ int main(int argc, char *argv[])
 			return err;
 		}
 	} else {
+    // or rcfile not specified, use $lxcpath/$lxcname/config
+    // rcfile not specified and does not exist.
 		int rc;
-
 		rc = asprintf(&rcfile, "%s/%s/config", lxcpath, my_args.name);
 		if (rc == -1) {
 			SYSERROR("failed to allocate memory");
 			return err;
 		}
+    // using rcfile /usr/local/var/lib/lxc/debian01/config
 		INFO("using rcfile %s", rcfile);
 
 		/* container configuration does not exist */
@@ -263,6 +271,9 @@ int main(int argc, char *argv[])
 			free(rcfile);
 			rcfile = NULL;
 		}
+    // load_config_locked: fname: /usr/local/var/lib/lxc/debian01/config
+    // c->is_running = lxcapi_is_running;
+    // c->start = lxcapi_start;
 		c = lxc_container_new(my_args.name, lxcpath);
 		if (!c) {
 			ERROR("Failed to create lxc_container");
@@ -270,6 +281,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
+  // 	c->is_running = lxcapi_is_running; check state is_running
 	if (c->is_running(c)) {
 		ERROR("Container is already running.");
 		err = 0;
@@ -292,13 +304,18 @@ int main(int argc, char *argv[])
 	}
 
 	if (my_args.pidfile != NULL) {
+    // access & creat
 		if (ensure_path(&c->pidfile, my_args.pidfile) < 0) {
 			ERROR("failed to ensure pidfile '%s'", my_args.pidfile);
 			goto out;
 		}
 	}
 
+  /*
+  enum { LXC_NS_MNT, LXC_NS_PID, LXC_NS_UTS, LXC_NS_IPC, LXC_NS_USER, LXC_NS_NET, LXC_NS_MAX };
+  */
 	int i;
+  // --share-[net|ipc|uts]=NAME Share a namespace with another container or pid
 	for (i = 0; i < LXC_NS_MAX; i++) {
 		if (my_args.share_ns[i] == NULL)
 			continue;
@@ -307,19 +324,36 @@ int main(int argc, char *argv[])
 		if (pid < 1)
 			goto out;
 
-		int fd = open_ns(pid, ns_info[i].proc_name);
+    /*
+      const struct ns_info ns_info[LXC_NS_MAX] = {
+        [LXC_NS_MNT] = {"mnt", CLONE_NEWNS},
+        [LXC_NS_PID] = {"pid", CLONE_NEWPID},
+        [LXC_NS_UTS] = {"uts", CLONE_NEWUTS},
+        [LXC_NS_IPC] = {"ipc", CLONE_NEWIPC},
+        [LXC_NS_USER] = {"user", CLONE_NEWUSER},
+        [LXC_NS_NET] = {"net", CLONE_NEWNET}
+      };
+     */
+		int fd = open_ns(pid, ns_info[i].proc_name); // <= snprintf(path, MAXPATHLEN, "/proc/%d/ns/%s", pid, ns_proc_name);
+
 		if (fd < 0)
 			goto out;
 		conf->inherit_ns_fd[i] = fd;
 	}
 
 	if (!my_args.daemonize) {
+    // static bool lxcapi_want_daemonize(struct lxc_container *c, bool state)
+    // // daemonize implies close_all_fds so set it
 		c->want_daemonize(c, false);
 	}
 
+  // --close-all-fds: If any fds are inherited, close them, If not specified, exit with failure instead
 	if (my_args.close_all_fds)
+    // lxcapi_want_close_all_fds
 		c->want_close_all_fds(c, true);
 
+  
+  // static bool lxcapi_start(struct lxc_container *c, int useinit, char * const argv[])
 	err = c->start(c, 0, args) ? 0 : 1;
 
 	if (err) {

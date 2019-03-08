@@ -153,10 +153,12 @@ static int ongoing_create(struct lxc_container *c)
 	if (fcntl(fd, F_GETLK, &lk) == 0 && lk.l_pid != -1) {
 		// create is still ongoing
 		close(fd);
+    DEBUG("ongoing_create: return 1");
 		return 1;
 	}
 	// create completed but partial is still there.
 	close(fd);
+  DEBUG("ongoing_create: return 2");
 	return 2;
 }
 
@@ -560,6 +562,7 @@ static bool am_single_threaded(void)
 
 		if (!strcmp(direntp->d_name, ".."))
 			continue;
+    // does thread ID exists
 		if (++count > 1)
 			break;
 	}
@@ -571,6 +574,7 @@ static bool am_single_threaded(void)
  * I can't decide if it'd be more convenient for callers if we accept '...',
  * or a null-terminated array (i.e. execl vs execv)
  */
+// c->start(c, 0, args)
 static bool lxcapi_start(struct lxc_container *c, int useinit, char * const argv[])
 {
 	int ret;
@@ -593,6 +597,7 @@ static bool lxcapi_start(struct lxc_container *c, int useinit, char * const argv
 	if (!c->lxc_conf)
 		return false;
 
+  // require ret = 0, say `ret = snprintf(path, len, "%s/%s/partial", c->config_path, c->name);` doesn't exist
 	if ((ret = ongoing_create(c)) < 0) {
 		ERROR("Error checking for incomplete creation");
 		return false;
@@ -637,7 +642,7 @@ static bool lxcapi_start(struct lxc_container *c, int useinit, char * const argv
 		if (pid < 0)
 			return false;
 
-		if (pid != 0) {
+		if (pid != 0) { // parent
 			/* Set to NULL because we don't want father unlink
 			 * the PID file, child will do the free and unlink.
 			 */
@@ -653,23 +658,27 @@ static bool lxcapi_start(struct lxc_container *c, int useinit, char * const argv
 		}
 		if (pid != 0)
 			exit(0);
+
+    // fall through /
 		/* like daemon(), chdir to / and redirect 0,1,2 to /dev/null */
 		if (chdir("/")) {
 			SYSERROR("Error chdir()ing to /.");
 			exit(1);
 		}
 		lxc_check_inherited(conf, -1);
+    // fd = open("/dev/null", O_RDWR); and dup2
 		if (null_stdfds() < 0) {
 			ERROR("failed to close fds");
 			exit(1);
 		}
 		setsid();
 	} else {
+    // check /proc/self/task
 		if (!am_single_threaded()) {
 			ERROR("Cannot start non-daemonized container when threaded");
 			return false;
 		}
-	}
+	} // end daemonize
 
 	/* We need to write PID file after daeminize, so we always
 	 * write the right PID.
@@ -700,6 +709,7 @@ static bool lxcapi_start(struct lxc_container *c, int useinit, char * const argv
 	conf->reboot = 0;
 
 reboot:
+  DEBUG("lxc_start");
 	ret = lxc_start(c->name, argv, conf, c->config_path);
 	c->error_num = ret;
 
@@ -1351,6 +1361,8 @@ static bool lxcapi_create(struct lxc_container *c, const char *t,
 
 	/* Mark that this container is being created */
   // fd=open(path, O_RDWR | O_CREAT | O_EXCL, 0755)
+  // Make sure that we execute `ongoing_create(c) != 2`
+  // When we failed container in turn, goto out_unlock and unlink(path) in remove_partial
 	if ((partial_fd = create_partial(c)) < 0)
 		goto out;
 
@@ -1429,6 +1441,7 @@ static bool lxcapi_create(struct lxc_container *c, const char *t,
 	ret = load_config_locked(c, c->configfile);
 
 out_unlock:
+  // if create_run_template failed...
 	if (partial_fd >= 0)
 		remove_partial(c, partial_fd);
 out:
@@ -3471,7 +3484,7 @@ struct lxc_container *lxc_container_new(const char *name, const char *configpath
 
   // We detect this by creating a 'partial' file under the container directory, and keeping an advisory lock.
   // return 2 .. create completed but partial is still there.
-  // snprintf(path, len, "%s/%s/partial", c->config_path, c->name);
+  // return 1 .. other process used the file, snprintf(path, len, "%s/%s/partial", c->config_path, c->name).
 	if (ongoing_create(c) == 2) {
 		ERROR("Error: %s creation was not completed", c->name);
 		lxcapi_destroy(c);

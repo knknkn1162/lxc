@@ -367,6 +367,7 @@ copy_debian()
 
 install_debian()
 {
+    # LOCALSTATEDIR = /usr/local/var/cache/lxc/debian
     cache="$LOCALSTATEDIR/cache/lxc/debian"
     rootfs=$1
     release=$2

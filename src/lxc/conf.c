@@ -361,6 +361,7 @@ static int run_buffer(char *buffer)
 	return 0;
 }
 
+// run_script_argv(name, "lxc", hookname, hook, lxcpath, argv);
 static int run_script_argv(const char *name, const char *section,
 		      const char *script, const char *hook, const char *lxcpath,
 		      char **argsin)
@@ -713,6 +714,8 @@ int pin_rootfs(const char *rootfs)
 	fd = open(absrootfspin, O_CREAT | O_RDWR, S_IWUSR|S_IRUSR);
 	if (fd < 0)
 		return fd;
+  // int unlink(const char *pathname);
+  // If the name was the last link to a file but any processes still have the file open, the file will remain in existence until the last file descriptor referring to it is closed.
 	(void)unlink(absrootfspin);
 	return fd;
 }
@@ -3091,6 +3094,7 @@ static int instantiate_veth(struct lxc_handler *handler, struct lxc_netdev *netd
 	/* changing the high byte of the mac address to 0xfe, the bridge interface
 	 * will always keep the host's mac address and not take the mac address
 	 * of a container */
+  // default is `lxc.network.hwaddr = 00:16:3e:xx:xx:xx`
 	err = setup_private_host_hw_addr(veth1);
 	if (err) {
 		ERROR("failed to change mac address of host interface '%s': %s",
@@ -3124,12 +3128,14 @@ static int instantiate_veth(struct lxc_handler *handler, struct lxc_netdev *netd
 		goto out_delete;
 	}
 
+  // return netdev_set_flag(name, IFF_UP);
 	err = lxc_netdev_up(veth1);
 	if (err) {
 		ERROR("failed to set %s up : %s", veth1, strerror(-err));
 		goto out_delete;
 	}
 
+  // lxc.network.script.up
 	if (netdev->upscript) {
 		err = run_script(handler->name, "net", netdev->upscript, "up",
 				 "veth", veth1, (char*) NULL);
@@ -3137,6 +3143,7 @@ static int instantiate_veth(struct lxc_handler *handler, struct lxc_netdev *netd
 			goto out_delete;
 	}
 
+  // instantiated veth 'vethXEI64T/veth0D5FW4', index is '6'
 	DEBUG("instantiated veth '%s/%s', index is '%d'",
 	      veth1, veth2, netdev->ifindex);
 
@@ -3403,7 +3410,16 @@ int lxc_create_network(struct lxc_handler *handler)
 			      netdev->type);
 			return -1;
 		}
-
+    /*
+      static  instantiate_cb netdev_conf[LXC_NET_MAXCONFTYPE + 1] = {
+        [LXC_NET_VETH]    = instantiate_veth,
+        [LXC_NET_MACVLAN] = instantiate_macvlan,
+        [LXC_NET_VLAN]    = instantiate_vlan,
+        [LXC_NET_PHYS]    = instantiate_phys,
+        [LXC_NET_EMPTY]   = instantiate_empty,
+        [LXC_NET_NONE]    = instantiate_none,
+      };
+     */
 		if (netdev_conf[netdev->type](handler, netdev)) {
 			ERROR("failed to create netdev");
 			return -1;
@@ -3618,6 +3634,7 @@ static int write_id_mapping(enum idtype idtype, pid_t pid, const char *buf,
 
 int lxc_map_ids(struct lxc_list *idmap, pid_t pid)
 {
+  // DEBUG(lxc_map_ids);
 	struct lxc_list *iterator;
 	struct id_map *map;
 	int ret = 0, use_shadow = 0;
@@ -3771,6 +3788,9 @@ int lxc_find_gateway_addresses(struct lxc_handler *handler)
 	lxc_list_for_each(iterator, network) {
 		netdev = iterator->elem;
 
+    //  } else if (!strcmp(value, "auto")) {
+    //       netdev->ipv4_gateway = NULL;
+    //       netdev->ipv4_gateway_auto = true;
 		if (!netdev->ipv4_gateway_auto && !netdev->ipv6_gateway_auto)
 			continue;
 
@@ -3829,6 +3849,7 @@ int lxc_create_tty(const char *name, struct lxc_conf *conf)
 
 		struct lxc_pty_info *pty_info = &tty_info->pty_info[i];
 
+    // pthread_mutex_lock
 		process_lock();
 		ret = openpty(&pty_info->master, &pty_info->slave,
 			    pty_info->name, NULL, NULL);
@@ -4461,6 +4482,10 @@ int run_lxc_hooks(const char *name, char *hook, struct lxc_conf *conf,
 		which = LXCHOOK_CLONE;
 	else
 		return -1;
+/*
+enum lxchooks { LXCHOOK_PRESTART, LXCHOOK_PREMOUNT, LXCHOOK_MOUNT, LXCHOOK_AUTODEV,
+	LXCHOOK_START, LXCHOOK_POSTSTOP, LXCHOOK_CLONE, NUM_LXC_HOOKS};
+ */
 	lxc_list_for_each(it, &conf->hooks[which]) {
 		int ret;
 		char *hookname = it->elem;

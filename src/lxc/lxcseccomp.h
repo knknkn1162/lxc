@@ -26,6 +26,7 @@
 
 #include "conf.h"
 
+// -DHAVE_SECCOMP
 #ifdef HAVE_SECCOMP
 int lxc_seccomp_load(struct lxc_conf *conf);
 int lxc_read_seccomp_config(struct lxc_conf *conf);

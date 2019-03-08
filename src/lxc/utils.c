@@ -321,6 +321,7 @@ ssize_t lxc_read_nointr_expect(int fd, void* buf, size_t count, const void* expe
 __attribute__((constructor))
 static void gnutls_lxc_init(void)
 {
+  fprintf(stderr, "static void gnutls_lxc_init(void) : constructor(require HAVE_LIBGNUTLS)\n")
 	gnutls_global_init();
 }
 
@@ -1413,6 +1414,11 @@ int lxc_preserve_ns(const int pid, const char *ns)
 	 * are supported by the kernel by passing in the NULL or the empty
 	 * string.
 	 */
+  /*
+    $ ls /proc/self/ns/
+    /proc/self/ns/cgroup  /proc/self/ns/mnt  /proc/self/ns/pid               /proc/self/ns/user
+    /proc/self/ns/ipc     /proc/self/ns/net  /proc/self/ns/pid_for_children  /proc/self/ns/uts
+   */
 	ret = snprintf(path, __NS_PATH_LEN, "/proc/%d/ns%s%s", pid,
 		       !ns || strcmp(ns, "") == 0 ? "" : "/",
 		       !ns || strcmp(ns, "") == 0 ? "" : ns);

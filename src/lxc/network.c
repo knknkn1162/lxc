@@ -1039,6 +1039,14 @@ static int ip_addr_get(int family, int ifindex, void **res)
 	struct nl_handler nlh;
 	struct nlmsg *nlmsg = NULL, *answer = NULL;
 	struct ifaddrmsg *ifa;
+/*
+  struct ifaddrmsg {
+      unsigned char ifa_family;    // Address type 
+      unsigned char ifa_prefixlen; // Prefixlength of address
+      unsigned char ifa_flags;     // Address flags
+      unsigned char ifa_scope;     // Address scope
+      int           ifa_index;     // Interface index
+  }; */
 	struct nlmsghdr *msg;
 	int err;
 	int recv_len = 0, answer_len;
@@ -1063,6 +1071,7 @@ static int ip_addr_get(int family, int ifindex, void **res)
 	answer_len = answer->nlmsghdr->nlmsg_len;
 
 	nlmsg->nlmsghdr->nlmsg_flags = NLM_F_REQUEST|NLM_F_ROOT;
+  // Add, remove or receive information about an IP address associated with an interface. 
 	nlmsg->nlmsghdr->nlmsg_type = RTM_GETADDR;
 
 	ifa = nlmsg_reserve(nlmsg, sizeof(struct ifaddrmsg));
@@ -1092,6 +1101,7 @@ static int ip_addr_get(int family, int ifindex, void **res)
 		/* Satisfy the typing for the netlink macros */
 		msg = answer->nlmsghdr;
 
+    // Return true if the netlink message is not truncated and is in a form suitable for parsing.
 		while (NLMSG_OK(msg, recv_len)) {
 			/* Stop reading if we see an error message */
 			if (msg->nlmsg_type == NLMSG_ERROR) {
@@ -1113,6 +1123,7 @@ static int ip_addr_get(int family, int ifindex, void **res)
 
 			ifa = (struct ifaddrmsg *)NLMSG_DATA(msg);
 			if (ifa->ifa_index == ifindex) {
+        // Find an IFA_LOCAL (or IFA_ADDRESS if not IFA_LOCAL is present) address from the given RTM_NEWADDR message.
 				if (ifa_get_local_ip(family, msg, res) < 0) {
 					err = -1;
 					goto out;
@@ -1393,6 +1404,31 @@ char *lxc_mkifname(char *template)
 
 int setup_private_host_hw_addr(char *veth1)
 {
+  /*
+    struct ifreq {
+        char ifr_name[IFNAMSIZ];
+        union {
+            struct sockaddr ifr_addr;
+            struct sockaddr ifr_dstaddr;
+            struct sockaddr ifr_broadaddr;
+            struct sockaddr ifr_netmask;
+            struct sockaddr ifr_hwaddr;
+            short           ifr_flags;
+            int             ifr_ifindex;
+            int             ifr_metric;
+            int             ifr_mtu;
+            struct ifmap    ifr_map;
+            char            ifr_slave[IFNAMSIZ];
+            char            ifr_newname[IFNAMSIZ];
+            char           *ifr_data;
+        };
+    };
+    struct sockaddr {
+      u_char		sa_len;
+      sa_family_t	sa_family;
+      char		sa_data[14];	// actually longer; address value
+    };
+   */
 	struct ifreq ifr;
 	int err;
 	int sockfd;
@@ -1402,6 +1438,7 @@ int setup_private_host_hw_addr(char *veth1)
 		return -errno;
 
 	snprintf((char *)ifr.ifr_name, IFNAMSIZ, "%s", veth1);
+  // Get the hardware address of a device using ifr_hwaddr.(Get)
 	err = ioctl(sockfd, SIOCGIFHWADDR, &ifr);
 	if (err < 0) {
 		close(sockfd);
