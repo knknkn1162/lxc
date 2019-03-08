@@ -49,6 +49,25 @@ See https://gist.github.com/knknkn1162/00590cc566269bf8edfdfb39a29016b9
 
 See https://gist.github.com/knknkn1162/868bd8a2428cc4291240eebcdd0fe20f
 
+## lxc-start
+
+```bash
+# create container at /usr/local/var/lib/lxc/debian01
+$ sudo lxc-create -n debian01 -t debian
+$ sudo ip link add name lxcbr0 type bridge
+$ sudo ip link set dev lxcbr0 up
+$ ip link show
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 65536 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
+    link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
+2: enp0s3: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc fq_codel state UP mode DEFAULT group default qlen 1000
+    link/ether 02:f9:15:7a:ba:9f brd ff:ff:ff:ff:ff:ff
+5: lxcbr0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc noqueue state UNKNOWN mode DEFAULT group default qlen 1000
+    link/ether b2:cd:58:7f:22:d5 brd ff:ff:ff:ff:ff:ff
+
+```
+
+The config file located in `/usr/local/var/lib/lxc/debian01/config` is [here](https://gist.github.com/knknkn1162/929115966b645589d9fd0111e1429be3).
+
 [![LXD](https://linuxcontainers.org/static/img/containers.png)](https://linuxcontainers.org/lxd)
 
 # LXC Official README.md
