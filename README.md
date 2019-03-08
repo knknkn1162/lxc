@@ -66,6 +66,16 @@ $ ip link show
     link/ether b2:cd:58:7f:22:d5 brd ff:ff:ff:ff:ff:ff
 ```
 
+### using cgmanager
+
+Note) cgmanager is now deprecated.
+
+See https://gist.github.com/knknkn1162/1d956eddd4d5ea1e0b7c4ff1a41a60d1.
+
+### using cgroupfs (directly R/W)
+
+See https://gist.github.com/knknkn1162/70c81080e1c477ab97ff98e8802cbf13.
+
 The config file located in `/usr/local/var/lib/lxc/debian01/config` is [here](https://gist.github.com/knknkn1162/929115966b645589d9fd0111e1429be3).
 
 
