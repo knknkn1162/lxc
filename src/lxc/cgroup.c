@@ -44,15 +44,17 @@ void cgroup_ops_init(void)
 		return;
 	}
 
-  fprintf(stderr, "cgroup_init\n");
 	DEBUG("cgroup_init");
 	#if HAVE_CGMANAGER
   // We check whether we can talk to cgmanager, escape to root cgroup if we are root, then close the connection.
+  fprintf(stderr, "cgm_ops_init\n");
 	ops = cgm_ops_init();
-  fprintf(stderr, "cgm_ops_init");
 	#endif
-	if (!ops)
+	if (!ops) {
+    fprintf(stderr, "cgfs_ops_init\n");
+    // directly write & read cgroupfs settings
 		ops = cgfs_ops_init();
+  }
 	if (ops) {
 		INFO("Initialized cgroup driver %s", ops->name);
     fprintf(stderr, "Initialized cgroup driver %s\n", ops->name);
@@ -86,7 +88,9 @@ void cgroup_destroy(struct lxc_handler *handler)
 /* Create the container cgroups for all requested controllers */
 bool cgroup_create(struct lxc_handler *handler)
 {
+  DEBUG("cgroup_create");
 	if (ops)
+    // cgm_create
 		return ops->create(handler->cgroup_data);
 	return false;
 }

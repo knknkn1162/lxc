@@ -323,6 +323,7 @@ static int _lxc_log_set_file(const char *name, const char *lxcpath, int create_d
 }
 
 // 	if (lxc_log_init(my_args.name, my_args.log_file, my_args.log_priority, my_args.progname, my_args.quiet, my_args.lxcpath[0]))
+// should we use __attribute__((constructor)) ?
 extern int lxc_log_init(const char *name, const char *file,
 			const char *priority, const char *prefix, int quiet,
 			const char *lxcpath)
@@ -330,6 +331,7 @@ extern int lxc_log_init(const char *name, const char *file,
 	int lxc_priority = LXC_LOG_PRIORITY_ERROR;
 	int ret;
 
+  //fprintf(stderr, "lxc_log_init\n");
 	if (lxc_log_fd != -1) {
 		WARN("lxc_log_init called with log already initialized, lxc_log_fd: %d\n", lxc_log_fd);
 		return 0;

@@ -606,6 +606,7 @@ static int must_drop_cap_sys_boot(struct lxc_conf *conf)
 		if (flags & CLONE_NEWUSER)
 			ERROR("failed to clone (%#x): %s (includes CLONE_NEWUSER)", flags, strerror(errno));
 		else
+      // lxc-start: start.c: must_drop_cap_sys_boot: 609 failed to clone (0x20000011): Operation not permitted
 			ERROR("failed to clone (%#x): %s", flags, strerror(errno));
 		return -1;
 	}

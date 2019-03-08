@@ -2364,6 +2364,7 @@ static void cgfs_destroy(void *hdata)
 
 static inline bool cgfs_create(void *hdata)
 {
+  DEBUG("cgfs_create");
 	struct cgfs_data *d = hdata;
 	struct cgroup_process_info *i;
 	struct cgroup_meta_data *md;

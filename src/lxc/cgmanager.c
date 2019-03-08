@@ -623,14 +623,17 @@ static inline void cleanup_cgroups(char *path)
 
 static inline bool cgm_create(void *hdata)
 {
+  DEBUG("cgm_create");
 	struct cgm_data *d = hdata;
 	char **slist = subsystems;
 	int i, index=0, baselen, ret;
 	int32_t existed;
 	char result[MAXPATHLEN], *tmp, *cgroup_path;
 
-	if (!d)
+	if (!d) {
+    DEBUG("cgm_data doesnt exist");
 		return false;
+  }
 // XXX we should send a hint to the cgmanager that when these
 // cgroups become empty they should be deleted.  Requires a cgmanager
 // extension
@@ -1311,14 +1314,20 @@ out_free:
  */
 struct cgroup_ops *cgm_ops_init(void)
 {
-	if (!collect_subsytems())
+	if (!collect_subsytems()) {
+    fprintf(stderr, "collect_subsytems()\n");
 		return NULL;
-	if (!cgm_dbus_connect())
+  }
+	if (!cgm_dbus_connect()) {
+    fprintf(stderr, "cgm_dbus_connect\n");
 		goto err1;
+  }
 
 	// root;  try to escape to root cgroup
-	if (geteuid() == 0 && !lxc_cgmanager_escape())
+	if (geteuid() == 0 && !lxc_cgmanager_escape()) {
+    fprintf(stderr, "lxc_cmanager_escape()\n");
 		goto err2;
+  }
 	cgm_dbus_disconnect();
 
 /*
