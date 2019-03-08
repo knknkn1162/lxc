@@ -14,6 +14,6 @@ Vagrant.configure('2') do |config|
     # for seccomp.h and sys/capability.h
     # cgmanager is not deprecated
     apt-get install -y gcc make autotools-dev automake pkg-config libcap-dev debootstrap uidmap libseccomp-dev \
-    libcgmanager-dev
+    cgmanager cgmanager-utils
   SHELL
 end
